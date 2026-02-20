@@ -3,7 +3,7 @@ import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import Conversation from "../models/conversation.model.js";
-import { generateAIReply } from "../AI/aiservice.js";
+import { generateAIReply } from "../AI/aiService.js";
 
 const aiUsageMap = new Map();
 
