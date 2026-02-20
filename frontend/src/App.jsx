@@ -12,7 +12,7 @@ import { Toaster } from "react-hot-toast";
 import ThemeSync from "./components/ThemeSync";
 import CallListener from "./components/CallListener";
 import CallControls from "./components/CallControls";
-import { socket } from "./lib/socket"; // ✅ REQUIRED
+import { useThemeStore } from "./store/useThemeStore";
 import CallingUI from "./components/CallingUI";
 import { useChatStore } from "./store/useChatStore";
 import VideoCallUI from "./components/VideoCallUI";
@@ -20,6 +20,7 @@ import { useAudioCall } from "./store/useAudioCall";
 
 const App = () => {
   const { endCall } = useAudioCall();
+  const socket = useAuthStore((s) => s.socket);
   const [callType, setCallType] = useState(null);
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
   const [calling, setCalling] = useState(false);
@@ -59,6 +60,7 @@ const App = () => {
 
   // ✅ SINGLE SOURCE OF TRUTH FOR ENDING CALL UI
   useEffect(() => {
+    if (!socket) return; // ✅ IMPORTANT
     const onCallEnded = () => {
       console.log("📴 call-ended → hiding controls");
       setCallActive(false);
@@ -71,6 +73,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    if (!socket) return;
     socket.on("disconnect", () => {
       console.log("❌ SOCKET DISCONNECTED");
     });
@@ -108,7 +111,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
+      {/* <Navbar /> */}
       <ThemeSync />
 
       <CallListener

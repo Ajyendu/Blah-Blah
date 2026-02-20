@@ -161,6 +161,8 @@ function MessageItem({ message, onReveal }) {
 
   const isSender = message.senderId === authUser._id;
   const isTimed = message.revealAt && !message.revealed;
+  const BOT_ID = "6997e34d5bfffd55ff54458d";
+  const isBot = message.senderId === BOT_ID;
 
   // 🔐 RECEIVER – hide content
   if (isTimed && message.revealAt && !isSender) {
@@ -174,11 +176,16 @@ function MessageItem({ message, onReveal }) {
       </div>
     );
   }
+  const [botTyping, setBotTyping] = useState(false);
 
   // ✅ SENDER OR REVEALED
   return (
     <div className={`flex flex-col ${isSender ? "items-end" : "items-start"}`}>
-      <div className="message-bubble">
+      <div
+        className={`message-bubble ${
+          isBot ? "bot-bubble" : isSender ? "sender-bubble" : "receiver-bubble"
+        }`}
+      >
         <div>{message.text}</div>
       </div>
 

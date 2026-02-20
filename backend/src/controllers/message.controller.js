@@ -3,6 +3,9 @@ import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import Conversation from "../models/conversation.model.js";
+import { generateAIReply } from "../AI/aiservice.js";
+
+const aiUsageMap = new Map();
 
 export const getUsersForSidebar = async (req, res) => {
   try {
@@ -173,6 +176,11 @@ export const getMessagesByConversation = async (req, res) => {
       chatId: conversationId,
       receiverId: userId,
       seen: false,
+      $or: [
+        { visibleTo: { $exists: false } }, // old messages
+        { visibleTo: { $size: 0 } }, // public messages
+        { visibleTo: userId }, // private visible messages
+      ],
     });
 
     if (unseenMessages.length > 0) {
@@ -189,7 +197,7 @@ export const getMessagesByConversation = async (req, res) => {
 
       unseenMessages.forEach((msg) => {
         const senderSocket = getReceiverSocketId(msg.senderId.toString());
-        if (senderSocket.length) {
+        if (senderSocket) {
           io.to(senderSocket).emit("messageSeen", {
             messageId: msg._id,
             seenAt,
@@ -198,7 +206,13 @@ export const getMessagesByConversation = async (req, res) => {
       });
     }
 
-    const messages = await Message.find({ chatId: conversationId });
+    const messages = await Message.find({
+      chatId: conversationId,
+      $or: [
+        { visibleTo: { $size: 0 } }, // normal messages
+        { visibleTo: userId }, // private visible
+      ],
+    });
 
     const normalized = messages.map((m) => normalizeMessage(m.toObject()));
 
@@ -228,6 +242,9 @@ export const sendMessage = async (req, res) => {
       return res.status(403).json({ message: "Chat not accepted yet" });
     }
 
+    // ================= PRIVATE AI DETECT =================
+    const isPrivateAI = text?.trim().toLowerCase().startsWith("@buddy");
+
     let imageUrl;
     if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image);
@@ -235,7 +252,9 @@ export const sendMessage = async (req, res) => {
     }
 
     const isTimed = !!revealAt;
+    const BOT_ID = "6997e34d5bfffd55ff54458d";
 
+    // ================= USER MESSAGE =================
     const newMessage = await Message.create({
       chatId: conversation._id,
       senderId,
@@ -243,15 +262,139 @@ export const sendMessage = async (req, res) => {
       text: text || "",
       image: imageUrl || "",
       revealAt: isTimed ? new Date(revealAt) : null,
-      revealed: !isTimed, // ✅ FIX
+      revealed: !isTimed,
+      isPrivateAI,
+      visibleTo: isPrivateAI ? [senderId] : [],
     });
-
-    conversation.lastMessage = newMessage._id;
-    await conversation.save();
 
     const payload = normalizeMessage(newMessage.toObject());
 
-    io.to(conversation._id.toString()).emit("new_message", payload);
+    // ================= SOCKET EMIT =================
+    if (!isPrivateAI) {
+      const senderSocket = getReceiverSocketId(senderId.toString());
+      const receiverSocket = getReceiverSocketId(receiverId.toString());
+
+      if (senderSocket) {
+        io.to(senderSocket).emit("new_message", payload);
+      }
+
+      if (receiverSocket) {
+        io.to(receiverSocket).emit("new_message", payload);
+      }
+    }
+
+    if (isPrivateAI) {
+      const senderSocket = getReceiverSocketId(senderId.toString());
+
+      // 🔥 send user message only to sender
+      if (senderSocket) {
+        io.to(senderSocket).emit("new_message", payload);
+        io.to(senderSocket).emit("bot_typing", true);
+      }
+
+      const cleanPrompt = text.replace(/@buddy/i, "").trim();
+
+      // ================= RATE LIMIT =================
+      const lastUsed = aiUsageMap.get(senderId.toString()) || 0;
+      if (Date.now() - lastUsed < 3000) {
+        if (senderSocket) {
+          io.to(senderSocket).emit("bot_typing", false);
+        }
+        return res.status(429).json({
+          message: "Buddy: slow down a bit 🙂",
+        });
+      }
+      aiUsageMap.set(senderId.toString(), Date.now());
+
+      // ================= CONTEXT MEMORY =================
+      const contextMessages = await Message.find({
+        chatId: conversation._id,
+        $or: [{ visibleTo: { $size: 0 } }, { visibleTo: senderId }],
+      })
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .lean();
+
+      const contextText = contextMessages
+        .reverse()
+        .map((m) => {
+          const role =
+            m.senderId.toString() === senderId.toString() ? "User" : "buddy";
+          return `${role}: ${m.text}`;
+        })
+        .join("\n");
+
+      // ================= LOCAL COMMANDS (FREE) =================
+      let aiReply = null;
+
+      if (cleanPrompt === "time") {
+        aiReply = `🕒 ${new Date().toLocaleTimeString()}`;
+      }
+
+      if (cleanPrompt === "date") {
+        aiReply = `📅 ${new Date().toDateString()}`;
+      }
+
+      if (cleanPrompt.startsWith("calc")) {
+        try {
+          const expr = cleanPrompt.replace("calc", "");
+          aiReply = `🧮 ${eval(expr)}`;
+        } catch {
+          aiReply = "Invalid calculation 😅";
+        }
+      }
+
+      // ================= COMMAND SYSTEM =================
+      if (!aiReply && cleanPrompt === "summarize") {
+        aiReply =
+          "Summary:\n" +
+          contextMessages
+            .map((m) => m.text)
+            .join(" ")
+            .slice(0, 250);
+      }
+
+      // ================= GEMINI CALL =================
+      if (!aiReply) {
+        const fullPrompt = `
+    Recent conversation:
+    ${contextText}
+    
+    User: ${cleanPrompt}
+    `;
+
+        aiReply = await generateAIReply(fullPrompt);
+      }
+
+      // ================= HUMAN FEEL =================
+      await new Promise((r) => setTimeout(r, 600));
+
+      // ================= TRIM LONG REPLIES =================
+      if (aiReply.length > 300) {
+        aiReply = aiReply.slice(0, 300) + "...";
+      }
+
+      if (senderSocket) {
+        io.to(senderSocket).emit("bot_typing", false);
+      }
+
+      // ================= BOT MESSAGE =================
+      const botMessage = await Message.create({
+        chatId: conversation._id,
+        senderId: BOT_ID,
+        receiverId: senderId,
+        text: aiReply,
+        isPrivateAI: true,
+        visibleTo: [senderId],
+        revealed: true,
+      });
+
+      const botPayload = normalizeMessage(botMessage.toObject());
+
+      if (senderSocket) {
+        io.to(senderSocket).emit("new_message", botPayload);
+      }
+    }
 
     res.status(201).json(payload);
   } catch (error) {
@@ -259,6 +402,7 @@ export const sendMessage = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 function normalizeMessage(message) {
   if (
     message.revealAt &&

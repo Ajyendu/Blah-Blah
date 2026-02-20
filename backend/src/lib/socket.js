@@ -2,6 +2,10 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import { detectBotMention } from "./detectBot.js";
+import { generateAIReply } from "../AI/aiservice.js";
+import ChatMemory from "../models/chatMemory.model.js";
+import { extractMemory } from "../AI/memoryExtractor.js";
 
 let io;
 
@@ -14,7 +18,12 @@ export const initSocket = (server) => {
   io = new Server(server, {
     path: "/socket.io",
     cors: {
-      origin: "*",
+      origin: [
+        "http://localhost:8081",
+        "https://localhost:8081",
+        "http://localhost:8080",
+        "http://localhost:5050",
+      ],
       credentials: true,
     },
   });
@@ -74,6 +83,33 @@ export const initSocket = (server) => {
       io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
     });
 
+    socket.on("send_message", async ({ chatId, message }) => {
+      try {
+        // 1️⃣ Detect @Buddy
+        const cleanMessage = detectBotMention(message);
+
+        if (!cleanMessage) return; // No AI trigger
+
+        // 2️⃣ Generate AI reply
+        const aiReply = await generateAIReply(cleanMessage);
+
+        // 3️⃣ Send PRIVATE reply only to this user
+        socket.emit("ai_private_reply", {
+          chatId,
+          message: aiReply,
+          sender: {
+            _id: "buddy",
+            fullName: "Buddy",
+            profilePic: null,
+          },
+          private: true,
+          createdAt: new Date(),
+        });
+      } catch (error) {
+        console.error("AI error:", error.message);
+      }
+    });
+
     // ================= CALL =================
     socket.on("call-user", ({ to, offer, callType }) => {
       const receiverSockets = userSocketMap.get(to);
@@ -108,54 +144,7 @@ export const initSocket = (server) => {
       }
     });
 
-    // socket.on("mark_messages_seen", async ({ conversationId }) => {
-    //   try {
-    //     if (!conversationId) return;
-
-    //     const viewerId = socket.userId;
-    //     const now = new Date();
-
-    //     // find unseen messages sent by OTHER users
-    //     const unseenMessages = await Message.find({
-    //       conversationId,
-    //       senderId: { $ne: viewerId },
-    //       seenAt: { $exists: false },
-    //     }).select("senderId");
-
-    //     if (unseenMessages.length === 0) return;
-
-    //     // mark seen
-    //     await Message.updateMany(
-    //       {
-    //         conversationId,
-    //         senderId: { $ne: viewerId },
-    //         seenAt: { $exists: false },
-    //       },
-    //       { $set: { seenAt: now } }
-    //     );
-
-    //     // notify each sender directly
-    //     const uniqueSenders = [
-    //       ...new Set(unseenMessages.map((m) => m.senderId.toString())),
-    //     ];
-
-    //     for (const senderId of uniqueSenders) {
-    //       const senderSockets = userSocketMap.get(senderId);
-    //       if (!senderSockets) continue;
-
-    //       for (const sid of senderSockets) {
-    //         io.to(sid).emit("messagesSeen", {
-    //           conversationId,
-    //           seenAt: now,
-    //         });
-    //       }
-    //     }
-    //   } catch (err) {
-    //     console.error("❌ mark_messages_seen failed:", err);
-    //   }
-    // });
     socket.on("chat_opened", async ({ chatId, userId }) => {
-      // Mark all messages sent TO this user as seen
       const result = await Message.updateMany(
         {
           chatId,
@@ -170,11 +159,6 @@ export const initSocket = (server) => {
         }
       );
 
-      // Notify sender(s)
-      // socket.to(chatId.toString()).emit("chat_seen_update", {
-      //   chatId,
-      //   seenAt: new Date(),
-      // });
       const messages = await Message.find({
         chatId,
         receiverId: userId,
@@ -196,17 +180,14 @@ export const initSocket = (server) => {
         }
       }
     });
+    socket.on("screen_share_started", ({ chatId }) => {
+      socket.to(chatId).emit("screen_share_started");
+    });
+
     socket.on("join_chat", ({ chatId }) => {
       if (!chatId) return;
       socket.join(chatId.toString());
     });
-
-    // socket.on("joinChat", ({ conversationId }) => {
-    //   if (!conversationId) return;
-
-    //   socket.join(conversationId);
-    //   console.log(`📥 socket ${socket.id} joined chat ${conversationId}`);
-    // });
 
     socket.on("end-call", ({ to }) => {
       const receiverSockets = userSocketMap.get(to);
@@ -216,7 +197,7 @@ export const initSocket = (server) => {
         }
       }
 
-      socket.emit("call-ended");
+      socket.emit("call-ended"); //new
     });
   });
 };

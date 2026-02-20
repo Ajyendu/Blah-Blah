@@ -14,7 +14,10 @@ const conversationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
+    // backgroundColor: {
+    //   type: String,
+    //   default: "#ffffff",
+    // },
     acceptedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

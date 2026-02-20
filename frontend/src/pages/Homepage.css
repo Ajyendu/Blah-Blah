@@ -1,0 +1,54 @@
+/* ================= CHAT LAYOUT ================= */
+
+.chat-layout {
+  display: flex;
+  flex: 1; /* 🔥 REQUIRED */
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* allow scroll */
+.chat-layout,
+.chat-layout > * {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* NORMAL MODE (no screen share) */
+.chat-layout:not(.sharing) > * {
+  width: 100%;
+}
+
+/* SCREEN SHARE MODE */
+.chat-layout.sharing {
+  display: grid;
+  grid-template-columns: 60% 40%;
+}
+
+/* LEFT: CHAT */
+.chat-layout.sharing > :first-child {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* RIGHT: SCREEN SHARE */
+.chat-layout.sharing > :last-child {
+  background: #000;
+}
+.chat-layout {
+  transition: all 0.25s ease;
+}
+.flash {
+  animation: pulse 1.5s ease;
+}
+
+@keyframes pulse {
+  0% {
+    background: rgba(255, 215, 0, 0.3);
+  }
+  100% {
+    background: transparent;
+  }
+}

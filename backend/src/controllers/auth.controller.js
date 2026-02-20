@@ -115,7 +115,6 @@ export const checkAuth = async (req, res) => {
   res.status(200).json(user);
 };
 
-
 // ================== UPDATE PROFILE ==================
 export const updateProfile = async (req, res) => {
   const { profilePic } = req.body;

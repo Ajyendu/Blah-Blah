@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 let listenersAttached = false;
+
 export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
@@ -12,6 +13,7 @@ export const useChatStore = create((set, get) => ({
   chats: [],
   selectedChat: null,
   lastSeenAtByConversation: {},
+  isScreenSharing: false,
 
   acceptChat: async (conversationId) => {
     await axiosInstance.post("/conversations/accept", {
@@ -62,6 +64,17 @@ export const useChatStore = create((set, get) => ({
     } catch (err) {
       toast.error("Failed to load chats");
     }
+  },
+  startScreenShare: () => {
+    set({ isScreenSharing: true });
+    const socket = useAuthStore.getState().socket;
+    socket.emit("start_screen_share");
+  },
+
+  stopScreenShare: () => {
+    set({ isScreenSharing: false });
+    const socket = useAuthStore.getState().socket;
+    socket.emit("stop_screen_share");
   },
 
   setSelectedChat: (chat) =>
@@ -144,6 +157,10 @@ export const useChatStore = create((set, get) => ({
       // socket will handle it
       const socket = useAuthStore.getState().socket;
       socket.emit("join_chat", { chatId: messageData.conversationId });
+      socket.emit("send_message", {
+        chatId: messageData.conversationId,
+        message: messageData.text,
+      });
     } catch (error) {
       console.error("Send failed:", error);
       toast.error(error.response?.data?.message || "Failed to send message");
@@ -177,42 +194,11 @@ export const useChatStore = create((set, get) => ({
       }));
     });
 
-    // socket.on("messagesSeen", ({ conversationId, seenAt }) => {
-    //   set((state) => ({
-    //     lastSeenAtByConversation: {
-    //       ...state.lastSeenAtByConversation,
-    //       [conversationId]: seenAt,
-    //     },
-    //     messages: state.messages.map((m) =>
-    //       m.conversationId === conversationId &&
-    //       m.senderId === state.authUser._id
-    //         ? { ...m, seenAt: m.seenAt ?? seenAt }
-    //         : m
-    //     ),
-    //   }));
-    // });
-
     socket.on("new_message", (data) => {
       set((state) => ({
         messages: [...state.messages, data.message ?? data],
       }));
     });
-
-    // socket.on("newMessage", (newMessage) => {
-    //   set((state) => {
-    //     const seenAt =
-    //       state.lastSeenAtByConversation[newMessage.conversationId];
-
-    //     return {
-    //       messages: [
-    //         ...state.messages,
-    //         seenAt && newMessage.senderId === state.authUser._id
-    //           ? { ...newMessage, seenAt }
-    //           : newMessage,
-    //       ],
-    //     };
-    //   });
-    // });
 
     socket.on("messageDeletedForEveryone", ({ messageId, deletedBy }) => {
       set((state) => ({
@@ -228,28 +214,6 @@ export const useChatStore = create((set, get) => ({
         String(m.chatId) === String(chatId) ? { ...m, seen: true, seenAt } : m
       ),
     })),
-
-  // markMessagesSeen: (conversationId) => {
-  //   const socket = useAuthStore.getState().socket;
-  //   const authUserId = useAuthStore.getState().authUser?._id;
-
-  //   if (!socket || !authUserId) return;
-
-  //   const now = new Date().toISOString();
-
-  //   // optimistic update
-  //   set((state) => ({
-  //     messages: state.messages.map((m) =>
-  //       m.conversationId === conversationId &&
-  //       m.senderId !== authUserId &&
-  //       !m.seenAt
-  //         ? { ...m, seenAt: now }
-  //         : m
-  //     ),
-  //   }));
-
-  //   socket.emit("mark_messages_seen", { conversationId });
-  // },
 
   subscribeToChatEvents: () => {
     const socket = useAuthStore.getState().socket;
@@ -276,6 +240,12 @@ export const useChatStore = create((set, get) => ({
           selectedUser: shouldCloseChat ? null : state.selectedUser,
         };
       });
+    });
+
+    socket.on("ai_private_reply", (data) => {
+      set((state) => ({
+        messages: [...state.messages, data],
+      }));
     });
 
     socket.on("newChatMessage", ({ chat, message }) => {

@@ -12,6 +12,7 @@ import "./mood.css";
 import MessageItem from "./MessageItem";
 import NoChatSelected from "./NoChatSelected";
 import { formatRevealLabel } from "./MessageItem";
+import { useNoteStore } from "../store/useNoteStore";
 
 const ChatContainer = ({
   setCallType,
@@ -22,6 +23,7 @@ const ChatContainer = ({
   setCalling,
 }) => {
   const {
+    isScreenSharing,
     messages,
     getMessagesByConversation,
     isMessagesLoading,
@@ -37,6 +39,9 @@ const ChatContainer = ({
 
   const { authUser } = useAuthStore();
   const theme = useThemeStore((s) => s.theme);
+  const toggleNote = useNoteStore((s) => s.toggleNote);
+  const searchNote = useNoteStore((s) => s.searchNote);
+  const noteIds = useNoteStore((s) => s.noteIds);
 
   const bottomRef = useRef(null);
   const [previewImage, setPreviewImage] = useState(null);
@@ -53,9 +58,6 @@ const ChatContainer = ({
 
   useEffect(() => {
     subscribeToChatEvents();
-    return () => {
-      unsubscribeFromChatEvents();
-    };
   }, []);
 
   useEffect(() => {
@@ -75,6 +77,23 @@ const ChatContainer = ({
       userId: authUser._id,
     });
   }, [selectedChat?._id]);
+
+  const fetchNotes = useNoteStore((s) => s.fetchNotes);
+
+  useEffect(() => {
+    if (selectedChat?._id) {
+      fetchNotes(selectedChat._id);
+    }
+  }, [selectedChat?._id]);
+  const [botTyping, setBotTyping] = useState(false);
+
+  useEffect(() => {
+    socket.on("bot_typing", (status) => {
+      setBotTyping(status);
+    });
+
+    return () => socket.off("bot_typing");
+  }, []);
 
   // useEffect(() => {
   //   const socket = useAuthStore.getState().socket;
@@ -207,6 +226,7 @@ const ChatContainer = ({
                   <div
                     className={`relative px-3 py-2 rounded-2xl text-sm shadow
                       ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}
+                    id={`msg-${message._id}`}
                     style={{ backgroundColor: "white", color: "black" }}
                   >
                     {message.deleted ? (
@@ -263,6 +283,19 @@ const ChatContainer = ({
                         Delete for everyone
                       </button>
 
+                      <button
+                        onClick={() => {
+                          toggleNote({
+                            chatId: selectedChat._id,
+                            messageId: message._id,
+                          });
+                          setActiveMenu(null);
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-black/5 text-green-500"
+                      >
+                        {noteIds.has(message._id) ? "Unmark note" : "Mark note"}
+                      </button>
+
                       {isMine && (
                         <div className="px-4 py-2 text-[10px] opacity-60">
                           {`Sent at ${formatRevealLabel(message.createdAt)}`}
@@ -274,6 +307,16 @@ const ChatContainer = ({
               </div>
             );
           })}
+        {botTyping && (
+          <div className="bot-typing">
+            <span className="bot-name"></span>
+            <div className="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        )}
 
         {/* ALWAYS PRESENT */}
         <div ref={bottomRef} />
@@ -285,6 +328,7 @@ const ChatContainer = ({
         src={previewImage}
         onClose={() => setPreviewImage(null)}
       />
+      {/* ================= SCREEN SHARE (UI ONLY) ================= */}
     </div>
   );
 };

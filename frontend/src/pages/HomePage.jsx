@@ -7,6 +7,11 @@ import ChatContainer from "../components/ChatContainer";
 import { useAudioCall } from "../store/useAudioCall";
 import { useRef } from "react";
 import { useMoodBackground } from "../components/utils/mood/useMoodBackground";
+// import ScreenSharePanel from "../components/utils/mood/ScreenSharePanel/ScreenSharePanel";
+import "./Homepage.css";
+import ChatNotes from "../components/ChatNotes";
+import { useNoteStore } from "../store/useNoteStore";
+
 const HomePage = ({
   messages,
   setActiveCallUserAvatar,
@@ -17,6 +22,8 @@ const HomePage = ({
   startCall,
   setCallType,
 }) => {
+  const { isNotesOpen } = useNoteStore();
+
   const { authUser } = useAuthStore();
   const { selectedUser } = useChatStore();
   const theme = useThemeStore((s) => s.theme);
@@ -26,27 +33,45 @@ const HomePage = ({
   useMoodBackground(messages, authUser._id);
 
   return (
-    <div ref={messagesRef} className="chat-container-outer h-screen">
-      <div className="flex items-center justify-center pt-20 px-4">
-        <div className="rounded-lg shadow-xl w-full max-w-6xl h-[calc(100vh-8rem)]">
-          <div className="bg-white flex h-full rounded-lg overflow-hidden">
-            <Sidebar />
-            <div className="bg-white flex-1 flex flex-col">
-              {!selectedUser ? (
-                <NoChatSelected />
-              ) : (
-                <ChatContainer
-                  startCall={startCall}
-                  setCallType={setCallType}
-                  setCalling={setCalling}
-                  setCallActive={setCallActive}
-                  setActiveCallUserId={setActiveCallUserId}
-                  setActiveCallUserName={setActiveCallUserName}
-                  setActiveCallUserAvatar={setActiveCallUserAvatar}
-                />
-              )}
+    // <div className="chat-container h-screen w-screen flex">
+    <div className="app-shell h-screen w-screen flex">
+      {/* CHAT SHELL */}
+      <div className="flex flex-1 m-6 rounded-2xl bg-white shadow-xl overflow-hidden">
+        {/* SIDEBAR */}
+        <div className="w-[320px] border-r bg-white">
+          <Sidebar />
+        </div>
+
+        {/* MAIN CHAT */}
+        <div className="flex-1 flex flex-col bg-white">
+          {!selectedUser ? (
+            <NoChatSelected />
+          ) : (
+            // <div className={`chat-layout ${isScreenSharing ? "sharing" : ""}`}>
+            //   <ChatContainer
+            //     startCall={startCall}
+            //     setCallType={setCallType}
+            //     setCalling={setCalling}
+            //     setCallActive={setCallActive}
+            //     setActiveCallUserId={setActiveCallUserId}
+            //     setActiveCallUserName={setActiveCallUserName}
+            //     setActiveCallUserAvatar={setActiveCallUserAvatar}
+            //   />
+            //   {isScreenSharing && <ScreenSharePanel />}
+            // </div>
+            <div className={`chat-layout`}>
+              <ChatContainer
+                startCall={startCall}
+                setCallType={setCallType}
+                setCalling={setCalling}
+                setCallActive={setCallActive}
+                setActiveCallUserId={setActiveCallUserId}
+                setActiveCallUserName={setActiveCallUserName}
+                setActiveCallUserAvatar={setActiveCallUserAvatar}
+              />
+              {isNotesOpen && <ChatNotes />}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

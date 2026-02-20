@@ -49,18 +49,20 @@ const Sidebar = () => {
 
       {/* Conversations */}
       <div className="overflow-y-auto w-full py-3">
-        {chats.map((chat) => {
-          const otherUser = chat.participants.find(
-            (u) => u._id !== authUser._id
-          );
+        {Array.isArray(chats) &&
+          chats.map((chat) => {
+            const otherUser = chat.participants.find(
+              (u) => u._id !== authUser._id
+            );
 
-          const isPending = !chat.acceptedBy && chat.createdBy !== authUser._id;
+            const isPending =
+              !chat.acceptedBy && chat.createdBy !== authUser._id;
 
-          return (
-            <button
-              key={chat._id}
-              onClick={() => setSelectedChat(chat)}
-              className={`
+            return (
+              <button
+                key={chat._id}
+                onClick={() => setSelectedChat(chat)}
+                className={`
               w-full p-3 flex items-center gap-3
               hover:bg-base-300 transition-colors
               ${
@@ -69,39 +71,39 @@ const Sidebar = () => {
                   : ""
               }
             `}
-            >
-              <div className="relative mx-auto lg:mx-0">
-                <img
-                  src={otherUser.profilePic || "/avatar.png"}
-                  alt={otherUser.name}
-                  className="size-12 object-cover rounded-full"
-                />
-                {onlineUsers.includes(otherUser._id) && (
-                  <span
-                    className="absolute bottom-0 right-0 size-3 bg-green-500 
-                  rounded-full ring-2 ring-zinc-900"
+              >
+                <div className="relative mx-auto lg:mx-0">
+                  <img
+                    src={otherUser.profilePic || "/avatar.png"}
+                    alt={otherUser.name}
+                    className="size-12 object-cover rounded-full"
                   />
-                )}
-              </div>
+                  {onlineUsers.includes(otherUser._id) && (
+                    <span
+                      className="absolute bottom-0 right-0 size-3 bg-green-500 
+                  rounded-full ring-2 ring-zinc-900"
+                    />
+                  )}
+                </div>
 
-              {/* User info - only visible on larger screens */}
+                {/* User info - only visible on larger screens */}
 
-              <div className="hidden lg:block text-left">
-                <div className="font-medium">{otherUser.fullName}</div>
+                <div className="hidden lg:block text-left">
+                  <div className="font-medium">{otherUser.fullName}</div>
 
-                {isPending ? (
-                  <span className="text-xs text-orange-500">
-                    Pending request
-                  </span>
-                ) : onlineUsers.includes(otherUser._id) ? (
-                  <span className="text-xs text-green-500">Online</span>
-                ) : (
-                  <span className="text-xs text-zinc-400">Offline</span>
-                )}
-              </div>
-            </button>
-          );
-        })}
+                  {isPending ? (
+                    <span className="text-xs text-orange-500">
+                      Pending request
+                    </span>
+                  ) : onlineUsers.includes(otherUser._id) ? (
+                    <span className="text-xs text-green-500">Online</span>
+                  ) : (
+                    <span className="text-xs text-zinc-400">Offline</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
 
         {chats.length === 0 && (
           <div

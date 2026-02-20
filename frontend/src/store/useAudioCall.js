@@ -1,7 +1,8 @@
 import { useRef, useEffect } from "react";
-import { socket } from "../lib/socket";
+import { useAuthStore } from "./useAuthStore";
 let remoteAudioEl = null;
 let remoteStream = null;
+
 export function unlockRemoteAudio() {
   if (!remoteAudioEl) {
     remoteAudioEl = document.createElement("audio");
@@ -37,6 +38,7 @@ function attachLocalVideo(stream) {
 }
 
 export function useAudioCall() {
+  const socket = useAuthStore((s) => s.socket);
   const callTypeRef = useRef("audio"); // "audio" | "video"
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -49,7 +51,6 @@ export function useAudioCall() {
     });
 
     pc.ontrack = (e) => {
-      const stream = e.streams[0];
       console.log("🎯 track received:", e.track.kind);
 
       if (!remoteStream) {
@@ -58,10 +59,9 @@ export function useAudioCall() {
 
       remoteStream.addTrack(e.track);
 
-      if (remoteAudioEl) {
-        remoteAudioEl.srcObject = stream;
-        console.log("🔊 remote audio attached");
-      }
+      const audio = unlockRemoteAudio();
+      audio.srcObject = remoteStream;
+      audio.play().catch(() => {});
 
       if (callTypeRef.current === "video") {
         const attachVideo = () => {
@@ -95,22 +95,10 @@ export function useAudioCall() {
   };
 
   /* ================= STREAM ================= */
-  const getLocalStream = async (type = "audio") => {
-    if (!localStreamRef.current) {
-      localStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: type === "video",
-      });
-      const localVideo = document.getElementById("local-video");
-      if (localVideo && type === "video") {
-        localVideo.srcObject = localStreamRef.current;
-      }
-    }
-    return localStreamRef.current;
-  };
 
   /* ================= CALLER ================= */
   const startCall = async (userId, type) => {
+    unlockRemoteAudio(); // 🔑 MUST BE USER ACTION
     callTypeRef.current = type;
     remoteUserIdRef.current = userId;
 
@@ -122,13 +110,13 @@ export function useAudioCall() {
       video: type === "video",
     });
 
-    localStreamRef.current = stream;
-
     // ✅ attach local preview
 
     if (type === "video") {
       attachLocalVideo(stream);
     }
+
+    localStreamRef.current = stream;
 
     // ✅ ADD TRACKS BEFORE OFFER
     stream.getTracks().forEach((track) => {
@@ -146,6 +134,7 @@ export function useAudioCall() {
 
   /* ================= RECEIVER ================= */
   const answerCall = async ({ from, offer, callType }) => {
+    unlockRemoteAudio();
     callTypeRef.current = callType;
     remoteUserIdRef.current = from;
 
@@ -213,6 +202,7 @@ export function useAudioCall() {
 
   /* ================= SOCKET ================= */
   useEffect(() => {
+    if (!socket) return; // ✅ IMPORTANT
     socket.on("call-answered", async ({ answer }) => {
       if (!pcRef.current) return;
       await pcRef.current.setRemoteDescription(answer);

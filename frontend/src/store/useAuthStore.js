@@ -133,29 +133,38 @@ export const useAuthStore = create((set, get) => ({
   // ================= SOCKET =================
   connectSocket: () => {
     const { authUser, token } = get();
-    if (!authUser || get().socket?.connected) return;
 
-    const socket = io("/", {
+    if (!authUser || !token) {
+      console.log("⛔ No authUser or token, skipping socket connect");
+      return;
+    }
+
+    if (!authUser || get().socket) return;
+
+    console.log("🔐 Connecting socket with token:", token);
+
+    const socket = io("http://localhost:5050", {
       auth: { token },
-      transports: ["websocket"],
     });
 
-    window.socket = socket; // 👈 VERY IMPORTANT
-
-    socket.connect();
-    set({ socket });
+    window.socket = socket;
 
     socket.on("connect", () => {
-      const chatStore = useChatStore.getState();
-
-      chatStore.subscribeToMessages();
-
       console.log("✅ Socket connected:", socket.id);
+
+      const chatStore = useChatStore.getState();
+      chatStore.subscribeToMessages();
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("❌ SOCKET CONNECT ERROR:", err.message);
     });
 
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+
+    set({ socket });
   },
 
   disconnectSocket: () => {

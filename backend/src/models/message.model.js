@@ -12,6 +12,17 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    visibleTo: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    isPrivateAI: {
+      type: Boolean,
+      default: false,
+    },
 
     seen: {
       type: Boolean,

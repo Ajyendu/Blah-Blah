@@ -1,0 +1,308 @@
+/* ================= CONTAINER ================= */
+
+.td-container {
+  text-align: center;
+  padding: 30px;
+
+  min-height: 100vh;
+}
+
+/* ================= STAGE ================= */
+
+.td-stage {
+  position: relative;
+  width: min(85vw, 500px);
+  aspect-ratio: 1 / 1;
+  margin: 40px auto;
+}
+
+/* ================= WHEEL ================= */
+/* 
+.wheel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 8px solid white;
+} */
+
+/* .wheel-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.wheel-label-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: 0 0;
+}
+
+/* .wheel-label {
+  position: absolute;
+  top: -200px; 
+  left: -20px;
+  font-weight: bold;
+  font-size: 18px;
+  color: black;
+  white-space: nowrap;
+} */
+/* */
+/* .inner-circle {
+  position: absolute;
+  width: 55%;
+  height: 55%;
+  background: #f2f2f2;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+*/
+*/
+
+/* ================= SLICES ================= */
+
+.slice {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  top: 50%;
+  left: 50%;
+  transform-origin: 0% 0%;
+  clip-path: polygon(0% 0%, 100% 0%, 0% 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 2px solid white;
+}
+
+/* ================= LABEL ================= */
+
+.slice-label {
+  font-weight: bold;
+  color: black;
+  font-size: 18px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  pointer-events: none;
+}
+
+/* ================= INNER CIRCLE ================= */
+
+.inner-circle {
+  position: absolute;
+  width: 55%;
+  height: 55%;
+  background: #f2f2f2;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+/* ================= BOTTLE ================= */
+
+.bottle-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.bottle-img {
+  width: 140px;
+  transition: transform 2.5s cubic-bezier(0.17, 0.67, 0.32, 1.2);
+}
+.bottle-img:active {
+  transform: scale(0.95);
+}
+
+/* ================= POINTER ================= */
+
+.pointer {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+}
+
+/* ================= BUTTON ================= */
+
+.spin-btn {
+  padding: 12px 24px;
+  border-radius: 30px;
+  border: none;
+  background: #4caf50;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.spin-btn:hover {
+  background: #388e3c;
+}
+
+/* ================= WINNER AREA ================= */
+.winner-area {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.winner-box {
+  padding: 14px 26px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #1b1b1b;
+
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 0 15px rgba(255, 215, 0, 0.5);
+
+  animation: popIn 0.4s ease;
+  transition: transform 0.2s ease;
+}
+
+.winner-box:hover {
+  transform: scale(1.05);
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.winner-box {
+  animation: popIn 0.4s ease, glowPulse 2s infinite alternate;
+}
+
+@keyframes glowPulse {
+  from {
+    box-shadow: 0 0 10px gold;
+  }
+  to {
+    box-shadow: 0 0 25px gold;
+  }
+}
+/* ================= ANIMATION ================= */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.inner-circle {
+  position: absolute;
+  z-index: 1;
+}
+
+.bottle-wrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 3; /* bottle on top */
+}
+
+.player-ring {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player {
+  position: absolute;
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: 0.3s;
+}
+
+.player.winner {
+  background: #ff9800;
+  color: #fff;
+  box-shadow: 0 0 20px #ff9800;
+}
+@keyframes shake {
+  0% {
+    transform: translate(0px, 0px);
+  }
+  20% {
+    transform: translate(-3px, 2px);
+  }
+  40% {
+    transform: translate(3px, -2px);
+  }
+  60% {
+    transform: translate(-2px, 1px);
+  }
+  80% {
+    transform: translate(2px, -1px);
+  }
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
+
+.shake {
+  animation: shake 0.4s ease;
+}
+.spotlight-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(0, 0, 0, 0.6) 70%
+  );
+  pointer-events: none;
+  animation: fadeInSpot 0.4s ease;
+  z-index: 5;
+}
+
+@keyframes fadeInSpot {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.winner-box {
+  animation: popIn 0.4s ease, glowPulse 1.5s infinite alternate;
+}
+
+@keyframes glowPulse {
+  from {
+    box-shadow: 0 0 10px gold;
+  }
+  to {
+    box-shadow: 0 0 25px gold;
+  }
+}

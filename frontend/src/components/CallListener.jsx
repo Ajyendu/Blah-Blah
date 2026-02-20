@@ -1,17 +1,19 @@
-import { socket } from "../lib/socket";
 import { useEffect, useState } from "react";
 import { useAudioCall } from "../store/useAudioCall";
 import IncomingCallModal from "./IncomingCallModal";
 import { ringtone } from "./utils/ringtone";
+import { useAuthStore } from "../store/useAuthStore";
 
 function CallListener({ setActiveCallUserId, setCallActive, setCallType }) {
+  const socket = useAuthStore((s) => s.socket);
   const { answerCall } = useAudioCall();
   const [activeCallUserName, setActiveCallUserName] = useState("");
   const [activeCallUserAvatar, setActiveCallUserAvatar] = useState(null);
   const [incoming, setIncoming] = useState(null);
 
   useEffect(() => {
-    socket.connect();
+    if (!socket) return; // 🔥 IMPORTANT
+    // socket.connect();
     socket.on("incoming-call", (data) => {
       setCallType(data.callType); // ✅ THIS LINE
       setActiveCallUserId(data.from);

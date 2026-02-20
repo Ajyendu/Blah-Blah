@@ -12,7 +12,8 @@ import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import conversationRoutes from "./routes/conversation.route.js";
 import readyRoutes from "./routes/ready.route.js";
-
+import noteRoutes from "./routes/note.routes.js";
+import chatDNARoutes from "./routes/chatDNA.js";
 dotenv.config();
 
 const app = express();
@@ -28,10 +29,7 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:8080",
-      "https://lawerence-unbossed-wallace.ngrok-free.dev",
-    ],
+    origin: true, // 🔥 allow any origin (DEV ONLY)
     credentials: true,
   })
 );
@@ -41,6 +39,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/ready", readyRoutes);
+app.use("/api/notes", noteRoutes);
+app.use("/api/chat-dna", chatDNARoutes);
 
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {

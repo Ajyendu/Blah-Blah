@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useAuthStore } from "../../../store/useAuthStore";
 
 /* ================= EMOTION CONFIG ================= */
 const EMOTIONS = {
@@ -387,6 +388,11 @@ function applyInertialMood(target, intensity) {
   )`;
 
   document.documentElement.style.setProperty("--chat-bg", value);
+
+  // const conversationId = useAuthStore.getState().activeConversationId;
+  // if (conversationId) {
+  //   socket.emit("update_mood_background", { conversationId, color: value });
+  // }
 }
 
 /* ================= MESSAGE WINDOW ================= */

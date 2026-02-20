@@ -12,5 +12,19 @@
   "license": "ISC",
   "devDependencies": {
     "vite-plugin-mkcert": "^1.17.9"
-  }
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "lodash": "^4.17.23",
+    "recharts": "^3.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iemafzalhassan/full-stack_chatApp.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/iemafzalhassan/full-stack_chatApp/issues"
+  },
+  "homepage": "https://github.com/iemafzalhassan/full-stack_chatApp#readme"
 }

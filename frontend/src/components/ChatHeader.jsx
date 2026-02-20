@@ -3,6 +3,11 @@ import { useChatStore } from "../store/useChatStore";
 import { useThemeStore } from "../store/useThemeStore";
 import { useAudioCall } from "../store/useAudioCall";
 import { useState } from "react";
+import { useNoteStore } from "../store/useNoteStore";
+import TruthDareGame from "./games/truthDare/TruthDareGame";
+import "./mood.css";
+import React from "react";
+import ChatDNA from "./utils/mood/ChatDNA/ChatDNA";
 
 const ChatHeader = ({
   setCalling,
@@ -13,9 +18,17 @@ const ChatHeader = ({
   setActiveCallUserAvatar,
 }) => {
   const { selectedUser } = useChatStore();
+  const { selectedChat } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const theme = useThemeStore((s) => s.theme);
   const { startCall } = useAudioCall(); // ✅ ONLY this from hook
+  const { isNotesOpen, setIsNotesOpen } = useNoteStore();
+  const [showGame, setShowGame] = useState(false);
+  const [showDNA, setShowDNA] = useState(false);
+
+  // const startScreenShare = useChatStore((s) => s.startScreenShare);
+  // const stopScreenShare = useChatStore((s) => s.stopScreenShare);
+  // const isScreenSharing = useChatStore((s) => s.isScreenSharing);
 
   return (
     <div className="p-2.5 border-b">
@@ -63,6 +76,33 @@ const ChatHeader = ({
         >
           📞
         </button>
+        <button onClick={() => setShowDNA(true)}>🧬 Chat DNA</button>
+        {showDNA && (
+          <div className="game-overlay">
+            <ChatDNA chatId={selectedChat._id} />
+            <button className="close-game" onClick={() => setShowDNA(false)}>
+              ✖
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={() => {
+            setIsNotesOpen(!isNotesOpen);
+          }}
+          title="Screen Share"
+        >
+          📝
+        </button>
+        <button onClick={() => setShowGame(true)}>🍾</button>
+        {showGame && (
+          <div className="game-overlay">
+            <TruthDareGame />
+            <button className="close-game" onClick={() => setShowGame(false)}>
+              ✖
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

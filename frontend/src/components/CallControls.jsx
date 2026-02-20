@@ -1,8 +1,8 @@
-import { socket } from "../lib/socket";
 import CallTimer from "./CallTimer";
 import { useEffect, useState } from "react";
 
 function CallControls({ activeCallUserId, name, avatar, callActive }) {
+  const socket = useAuthStore((s) => s.socket);
   return (
     <div style={overlayStyle}>
       <div style={controlBarStyle}>
