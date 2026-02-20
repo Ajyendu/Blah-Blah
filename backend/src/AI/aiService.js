@@ -1,10 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI("AIzaSyC3yrDEq3curMJm4tVQbB06AdzztRT0E5A");
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // choose model
 const model = genAI.getGenerativeModel({
-  model: "gemini-3-flash-preview", // The 2026 flagship for speed
+  model: "gemini-3-flash-preview",
 });
 export async function generateAIReply(prompt) {
   try {
