@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import { detectBotMention } from "./detectBot.js";
-import { generateAIReply } from "../AI/aiservice.js";
+import { generateAIReply } from "../AI/aiService.js";
 import ChatMemory from "../models/chatMemory.model.js";
 import { extractMemory } from "../AI/memoryExtractor.js";
 
