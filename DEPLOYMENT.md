@@ -1,0 +1,47 @@
+# Deployment (Render + Vercel)
+
+## Why the site wasn’t connecting
+
+- **Frontend** was calling `/api` (same origin), but the API runs on **Render** (different origin).
+- **Socket.io** was hardcoded to `http://localhost:5050` and backend CORS only allowed localhost.
+
+Those are fixed in code. You only need to set env vars correctly.
+
+---
+
+## 1. Backend (Render)
+
+- **Build command:** (whatever builds your backend, e.g. `npm install` in backend folder)
+- **Start command:** (e.g. `node src/index.js` or `npm start` from backend)
+
+**Environment variables in Render:**
+
+| Variable       | Value |
+|----------------|--------|
+| `FRONTEND_URL` | Your Vercel app URL, e.g. `https://your-app.vercel.app` (no trailing slash). For multiple origins use comma-separated: `https://app.vercel.app,https://preview.vercel.app` |
+| `JWT_SECRET`   | (already set if auth works) |
+| `MONGODB_URI`  | (already set) |
+| …              | Any other vars your backend needs |
+
+---
+
+## 2. Frontend (Vercel)
+
+**Environment variables in Vercel:**
+
+| Variable           | Value |
+|--------------------|--------|
+| `VITE_BACKEND_URL` | Your Render backend URL, e.g. `https://your-backend.onrender.com` (no trailing slash) |
+
+Add this in: **Project → Settings → Environment Variables**. Apply to Production (and Preview if you use preview deployments).
+
+Redeploy the frontend after adding or changing `VITE_BACKEND_URL` so the new value is baked into the build.
+
+---
+
+## 3. Checklist
+
+- [ ] Render: `FRONTEND_URL` = your Vercel URL (and any extra origins if needed).
+- [ ] Vercel: `VITE_BACKEND_URL` = your Render backend URL.
+- [ ] Redeploy both after changing env vars.
+- [ ] Render free tier may sleep; first request after sleep can be slow.

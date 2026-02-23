@@ -15,15 +15,23 @@ let io;
 const userSocketMap = new Map();
 
 export const initSocket = (server) => {
+  const allowedOrigins = [
+    "http://localhost:8081",
+    "https://localhost:8081",
+    "http://localhost:8080",
+    "http://localhost:5050",
+    "http://localhost:5173", // Vite dev
+    ...(process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(",").map((o) => o.trim()).filter(Boolean)
+      : []),
+  ];
   io = new Server(server, {
     path: "/socket.io",
     cors: {
-      origin: [
-        "http://localhost:8081",
-        "https://localhost:8081",
-        "http://localhost:8080",
-        "http://localhost:5050",
-      ],
+      origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        return cb(null, false);
+      },
       credentials: true,
     },
   });

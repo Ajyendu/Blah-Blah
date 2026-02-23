@@ -4,9 +4,6 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useChatStore } from "./useChatStore.js";
 
-const BASE_URL =
-  import.meta.env.MODE === "development" ? "http://localhost:5001" : "/";
-
 export const useAuthStore = create((set, get) => ({
   authUser: null,
   token: localStorage.getItem("token"), // ✅ STORE TOKEN
@@ -143,7 +140,8 @@ export const useAuthStore = create((set, get) => ({
 
     console.log("🔐 Connecting socket with token:", token);
 
-    const socket = io("http://localhost:5050", {
+    const backendUrl = (import.meta.env.VITE_BACKEND_URL || "").trim() || "http://localhost:5050";
+    const socket = io(backendUrl, {
       auth: { token },
     });
 
