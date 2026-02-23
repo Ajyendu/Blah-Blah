@@ -37,6 +37,16 @@ Add this in: **Project → Settings → Environment Variables**. Apply to Produc
 
 Redeploy the frontend after adding or changing `VITE_BACKEND_URL` so the new value is baked into the build.
 
+**Static assets (fix 404 for `/ringtone.mp3`, `/favicon.ico`, `/blah-blah.png`):**  
+Put these files in **`frontend/public/`** so Vite copies them to the build root:
+
+- `frontend/public/ringtone.mp3` → served at `/ringtone.mp3`
+- `frontend/public/blah-blah.png` → served at `/blah-blah.png` (favicon)
+- Optional: `frontend/public/favicon.ico` if you want `/favicon.ico` to work
+
+**SPA routing (fix 404 for `/login`, `/signup`, etc.):**  
+`frontend/vercel.json` is set up so unknown paths are rewritten to `index.html`; your client-side router then handles `/login`, `/signup`, etc. No extra config needed.
+
 ---
 
 ## 3. Checklist
