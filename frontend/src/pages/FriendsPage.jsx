@@ -10,7 +10,14 @@ import "./Homepage.css";
 
 const FriendsPage = () => {
   const navigate = useNavigate();
-  const { getMyChats, getMyFriends, friendsChats, setSelectedChat, ensureChatInList, removeFriend } = useChatStore();
+  const {
+    getMyChats,
+    getMyFriends,
+    friendsChats,
+    setSelectedChat,
+    ensureChatInList,
+    removeFriend,
+  } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmRemove, setConfirmRemove] = useState(null); // { chat, userName }
@@ -26,11 +33,18 @@ const FriendsPage = () => {
   // Friends = other participants from accepted chats (from friends API — not filtered by message count)
   const friends = (friendsChats || []).reduce((acc, chat) => {
     if (!chat?.acceptedBy) return acc;
-    const participants = Array.isArray(chat.participants) ? chat.participants : [];
+    const participants = Array.isArray(chat.participants)
+      ? chat.participants
+      : [];
     const other = participants.find(
       (p) => p && String(p._id ?? p) !== String(authUser?._id),
     );
-    if (other && !acc.some((f) => String(f.user._id ?? f.user) === String(other._id ?? other))) {
+    if (
+      other &&
+      !acc.some(
+        (f) => String(f.user._id ?? f.user) === String(other._id ?? other),
+      )
+    ) {
       acc.push({ user: other, chat });
     }
     return acc;
@@ -47,14 +61,26 @@ const FriendsPage = () => {
     const list = [...filteredFriends];
     if (sortBy === "alphabet") {
       list.sort((a, b) => {
-        const nameA = (a.user?.fullName ?? a.user?.username ?? "").toLowerCase();
-        const nameB = (b.user?.fullName ?? b.user?.username ?? "").toLowerCase();
+        const nameA = (
+          a.user?.fullName ??
+          a.user?.username ??
+          ""
+        ).toLowerCase();
+        const nameB = (
+          b.user?.fullName ??
+          b.user?.username ??
+          ""
+        ).toLowerCase();
         return nameA.localeCompare(nameB);
       });
     } else {
       list.sort((a, b) => {
-        const dateA = a.chat?.updatedAt ? new Date(a.chat.updatedAt).getTime() : 0;
-        const dateB = b.chat?.updatedAt ? new Date(b.chat.updatedAt).getTime() : 0;
+        const dateA = a.chat?.updatedAt
+          ? new Date(a.chat.updatedAt).getTime()
+          : 0;
+        const dateB = b.chat?.updatedAt
+          ? new Date(b.chat.updatedAt).getTime()
+          : 0;
         return dateB - dateA;
       });
     }
@@ -165,9 +191,7 @@ const FriendsPage = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={(e) =>
-                        handleRemoveFriend(e, chat, displayName)
-                      }
+                      onClick={(e) => handleRemoveFriend(e, chat, displayName)}
                       className="friends-panel__remove"
                       title="Remove friend"
                       aria-label="Remove friend"

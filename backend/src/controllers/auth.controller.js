@@ -6,7 +6,7 @@ import generateUserCode from "../lib/generateUserCode.js";
 
 // ================== SIGNUP ==================
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  let { fullName, email, password, gender, profilePic } = req.body;
 
   try {
     if (!fullName || !email || !password) {
@@ -16,6 +16,13 @@ export const signup = async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ message: "Password too short" });
     }
+
+    gender = typeof gender === "string" ? gender.trim().toLowerCase() : "";
+    if (!gender || !["male", "female"].includes(gender)) {
+      return res.status(400).json({ message: "Please select a gender" });
+    }
+
+    profilePic = profilePic && typeof profilePic === "string" ? profilePic.trim() : "";
 
     const exists = await User.findOne({ email });
     if (exists) {
@@ -38,18 +45,26 @@ export const signup = async (req, res) => {
       fullName,
       email,
       password: hashed,
-      userCode, // ✅ SAVED PROPERLY
+      userCode,
+      gender,
+      profilePic: profilePic || "",
     });
 
     const token = generateToken(user._id, res);
 
+    // Re-fetch so response matches DB and includes all fields
+    const saved = await User.findById(user._id)
+      .select("_id fullName email profilePic userCode gender")
+      .lean();
+
     res.status(201).json({
       user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        profilePic: user.profilePic,
-        userCode: user.userCode, // ✅ RETURN TO FRONTEND
+        _id: saved._id,
+        fullName: saved.fullName,
+        email: saved.email,
+        profilePic: saved.profilePic || "",
+        userCode: saved.userCode,
+        gender: saved.gender || "",
       },
       token,
     });
@@ -81,8 +96,9 @@ export const login = async (req, res) => {
         _id: user._id,
         fullName: user.fullName,
         email: user.email,
-        profilePic: user.profilePic,
-        userCode: user.userCode, // ✅ ALSO RETURN ON LOGIN
+        profilePic: user.profilePic || "",
+        userCode: user.userCode,
+        gender: user.gender || "",
       },
       token,
     });
@@ -105,19 +121,26 @@ export const checkAuth = async (req, res) => {
   }
 
   const user = await User.findById(req.user._id).select(
-    "_id fullName email profilePic userCode",
+    "_id fullName email profilePic userCode gender",
   );
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
 
-  res.status(200).json(user);
+  res.status(200).json({
+    _id: user._id,
+    fullName: user.fullName,
+    email: user.email,
+    profilePic: user.profilePic || "",
+    userCode: user.userCode,
+    gender: user.gender || "",
+  });
 };
 
 // ================== UPDATE PROFILE ==================
 export const updateProfile = async (req, res) => {
-  const { profilePic, fullName } = req.body;
+  const { profilePic, fullName, gender } = req.body;
   const userId = req.user._id;
 
   try {
@@ -125,13 +148,16 @@ export const updateProfile = async (req, res) => {
     if (typeof fullName === "string" && fullName.trim()) {
       updates.fullName = fullName.trim();
     }
+    if (gender === "male" || gender === "female") {
+      updates.gender = gender;
+    }
     if (profilePic) {
       const upload = await cloudinary.uploader.upload(profilePic);
       updates.profilePic = upload.secure_url;
     }
     if (Object.keys(updates).length === 0) {
       const user = await User.findById(userId).select(
-        "_id fullName email profilePic userCode",
+        "_id fullName email profilePic userCode gender",
       );
       return res.status(200).json(user);
     }
@@ -139,7 +165,14 @@ export const updateProfile = async (req, res) => {
       userId,
       updates,
       { new: true },
-    ).select("_id fullName email profilePic userCode");
+    ).select("_id fullName email profilePic userCode gender");
+
+    return res.status(200).json(updatedUser);
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+};
 
 // ================== DELETE ACCOUNT ==================
 export const deleteAccount = async (req, res) => {

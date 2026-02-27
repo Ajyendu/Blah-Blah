@@ -9,6 +9,7 @@ import {
   User,
 } from "lucide-react";
 import AuthLeftPanel from "../components/AuthLeftPanel";
+import { getRandomAvatarByGender } from "../lib/defaultAvatar.js";
 import "./AuthPage.css";
 import toast from "react-hot-toast";
 
@@ -18,6 +19,7 @@ const SignUpPage = () => {
     fullName: "",
     email: "",
     password: "",
+    gender: "male",
   });
 
   const { signup, isSigningUp } = useAuthStore();
@@ -35,7 +37,9 @@ const SignUpPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (validateForm()) signup(formData);
+    if (!validateForm()) return;
+    const profilePic = getRandomAvatarByGender(formData.gender);
+    signup({ ...formData, profilePic });
   };
 
   return (
@@ -123,6 +127,38 @@ const SignUpPage = () => {
                     <Eye className="w-4 h-4" />
                   )}
                 </button>
+              </div>
+            </div>
+
+            <div className="auth-form__group auth-form__group--row">
+              <span className="auth-form__label">Gender</span>
+              <div className="auth-form__radios">
+                <label className="auth-form__radio-label">
+                  <input
+                    type="radio"
+                    name="signup-gender"
+                    value="male"
+                    checked={formData.gender === "male"}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gender: e.target.value })
+                    }
+                    className="auth-form__radio"
+                  />
+                  <span>Male</span>
+                </label>
+                <label className="auth-form__radio-label">
+                  <input
+                    type="radio"
+                    name="signup-gender"
+                    value="female"
+                    checked={formData.gender === "female"}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gender: e.target.value })
+                    }
+                    className="auth-form__radio"
+                  />
+                  <span>Female</span>
+                </label>
               </div>
             </div>
 

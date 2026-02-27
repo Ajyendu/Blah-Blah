@@ -1,0 +1,45 @@
+/* Main screen preview: fixed size, scaled down; theme vars set on .main-screen-preview */
+
+.main-screen-preview {
+  width: 704px;
+  height: 480px;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.main-screen-preview--no-top-radius {
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.main-screen-preview__scale {
+  transform: scale(0.8);
+  transform-origin: top left;
+  width: 880px;
+  height: 600px;
+  pointer-events: none;
+}
+
+.main-screen-preview__shell {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.main-screen-preview .main-screen-preview__card {
+  margin: 0;
+}
+
+.main-screen-preview__card {
+  width: 100%;
+  height: 100%;
+  background: var(--dark-bg, #000) !important;
+}
+
+.main-screen-preview__content {
+  background: var(--app-bg, #fff) !important;
+}
