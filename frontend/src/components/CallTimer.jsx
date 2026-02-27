@@ -16,12 +16,16 @@ function CallTimer({ active }) {
     return () => clearInterval(interval);
   }, [active]);
 
-  const mins = Math.floor(seconds / 60);
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
+  const h = String(hours).padStart(2, "0");
+  const m = String(mins).padStart(2, "0");
+  const s = String(secs).padStart(2, "0");
 
   return (
-    <span style={{ color: "#fff", fontSize: "14px", minWidth: "45px" }}>
-      {mins}:{secs.toString().padStart(2, "0")}
+    <span style={{ color: "#fff", fontSize: "14px", minWidth: "100px" }}>
+      {h}h {m}m {s}s
     </span>
   );
 }

@@ -19,10 +19,13 @@ export const initSocket = (server) => {
     "http://localhost:8081",
     "https://localhost:8081",
     "http://localhost:8080",
+    "https://localhost:8080", // Vite dev with HTTPS (mkcert)
     "http://localhost:5050",
     "http://localhost:5173", // Vite dev
     ...(process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(",").map((o) => o.trim()).filter(Boolean)
+      ? process.env.FRONTEND_URL.split(",")
+          .map((o) => o.trim())
+          .filter(Boolean)
       : []),
   ];
   io = new Server(server, {
@@ -47,7 +50,7 @@ export const initSocket = (server) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.userId).select(
-        "_id fullName profilePic"
+        "_id fullName profilePic",
       );
 
       if (!user) {
@@ -74,6 +77,8 @@ export const initSocket = (server) => {
     const sockets = userSocketMap.get(socket.userId) || new Set();
     sockets.add(socket.id);
     userSocketMap.set(socket.userId, sockets);
+
+    socket.join(socket.userId);
 
     io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
 
@@ -120,7 +125,9 @@ export const initSocket = (server) => {
 
     // ================= CALL =================
     socket.on("call-user", ({ to, offer, callType }) => {
-      const receiverSockets = userSocketMap.get(to);
+      const toId = to != null ? String(to) : null;
+      if (!toId) return;
+      const receiverSockets = userSocketMap.get(toId);
       if (!receiverSockets) return;
 
       for (const sid of receiverSockets) {
@@ -135,7 +142,9 @@ export const initSocket = (server) => {
     });
 
     socket.on("answer-call", ({ to, answer }) => {
-      const receiverSockets = userSocketMap.get(to);
+      const toId = to != null ? String(to) : null;
+      if (!toId) return;
+      const receiverSockets = userSocketMap.get(toId);
       if (!receiverSockets) return;
 
       for (const sid of receiverSockets) {
@@ -144,7 +153,9 @@ export const initSocket = (server) => {
     });
 
     socket.on("ice-candidate", ({ to, candidate }) => {
-      const receiverSockets = userSocketMap.get(to);
+      const toId = to != null ? String(to) : null;
+      if (!toId) return;
+      const receiverSockets = userSocketMap.get(toId);
       if (!receiverSockets) return;
 
       for (const sid of receiverSockets) {
@@ -164,7 +175,7 @@ export const initSocket = (server) => {
             seen: true,
             seenAt: new Date(),
           },
-        }
+        },
       );
 
       const messages = await Message.find({
@@ -197,15 +208,57 @@ export const initSocket = (server) => {
       socket.join(chatId.toString());
     });
 
-    socket.on("end-call", ({ to }) => {
-      const receiverSockets = userSocketMap.get(to);
-      if (receiverSockets) {
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("call-ended");
-        }
-      }
+    socket.on("game_sync", ({ chatId, gameType, data }) => {
+      if (!chatId || !gameType) return;
+      socket.to(chatId.toString()).emit("game_sync", { gameType, data });
+    });
 
-      socket.emit("call-ended"); //new
+    socket.on(
+      "game_playing",
+      ({ chatId, otherUserId, gameName, userName, userAvatar }) => {
+        if (!chatId || !otherUserId) return;
+        const receiverSockets = userSocketMap.get(otherUserId.toString());
+        if (!receiverSockets) return;
+        const payload = {
+          chatId: chatId.toString(),
+          userId: socket.userId,
+          userName: userName ?? socket.userName,
+          userAvatar: userAvatar ?? socket.userAvatar,
+          gameName: gameName ?? "Truth or Dare",
+        };
+        for (const sid of receiverSockets) {
+          io.to(sid).emit("game_playing", payload);
+        }
+      },
+    );
+
+    socket.on("game_left", ({ chatId, otherUserId }) => {
+      if (!chatId || !otherUserId) return;
+      const receiverSockets = userSocketMap.get(otherUserId.toString());
+      if (!receiverSockets) return;
+      for (const sid of receiverSockets) {
+        io.to(sid).emit("game_left", {
+          chatId: chatId.toString(),
+          userId: socket.userId,
+        });
+      }
+    });
+
+    socket.on("end-call", ({ to }) => {
+      const raw = to != null ? String(to).trim() : "";
+      const toId = raw || null;
+      const payload = { endedBy: socket.userId, to: toId };
+      if (toId) {
+        const receiverSockets = userSocketMap.get(toId);
+        if (receiverSockets) {
+          for (const sid of receiverSockets) {
+            io.to(sid).emit("call-ended", payload);
+          }
+        }
+        io.to(toId).emit("call-ended", payload);
+      }
+      socket.emit("call-ended", payload);
+      io.emit("call-ended", payload);
     });
   });
 };
@@ -215,6 +268,14 @@ export const getReceiverSocketId = (userId) => {
   const sockets = userSocketMap.get(userId?.toString());
   if (!sockets) return [];
   return Array.from(sockets);
+};
+
+/** Emit to every socket for a user (handles multiple devices). */
+export const emitToUser = (userId, event, ...args) => {
+  const ids = getReceiverSocketId(userId);
+  for (const sid of ids) {
+    io.to(sid).emit(event, ...args);
+  }
 };
 
 export { io };

@@ -1,25 +1,41 @@
 import CallTimer from "./CallTimer";
-import { useEffect, useState } from "react";
+import { useAuthStore } from "../store/useAuthStore.js";
+import { useAudioCall } from "../store/useAudioCall.js";
+import { stopRemoteAudio } from "../lib/callAudio.js";
+import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
 
 function CallControls({ activeCallUserId, name, avatar, callActive }) {
   const socket = useAuthStore((s) => s.socket);
+  const { endCall } = useAudioCall();
+
+  const handleEndCall = () => {
+    const toUserId =
+      activeCallUserId == null
+        ? null
+        : typeof activeCallUserId === "string"
+          ? activeCallUserId.trim()
+          : (activeCallUserId._id != null ? String(activeCallUserId._id) : String(activeCallUserId));
+    if (toUserId) {
+      socket.emit("end-call", { to: toUserId });
+    }
+    stopRemoteAudio();
+    endCall();
+    window.dispatchEvent(new Event("call-ended-local"));
+  };
+
   return (
     <div style={overlayStyle}>
       <div style={controlBarStyle}>
         <div style={userInfo}>
-          <img src={avatar || "/avatar.png"} alt={name} style={avatarStyle} />
-          <div>
-            <div style={nameStyle}>{name}</div>
-          </div>
+          <img
+            src={avatar || DEFAULT_AVATAR_URL}
+            alt={name}
+            style={avatarStyle}
+          />
+          <div style={nameStyle}>{name}</div>
         </div>
 
-        <button
-          onClick={() => {
-            console.log("Ending call with:", activeCallUserId);
-            socket.emit("end-call", { to: activeCallUserId });
-          }}
-          style={endBtn}
-        >
+        <button onClick={handleEndCall} style={endBtn} type="button">
           End
         </button>
 
@@ -31,15 +47,12 @@ function CallControls({ activeCallUserId, name, avatar, callActive }) {
 
 export default CallControls;
 
-/* ================= STYLES ================= */
-
 const avatarStyle = {
   width: "42px",
   height: "42px",
   borderRadius: "50%",
   objectFit: "cover",
 };
-
 const userInfo = {
   display: "flex",
   alignItems: "center",
@@ -50,12 +63,6 @@ const nameStyle = {
   fontSize: "14px",
   fontWeight: "600",
 };
-
-const statusStyle = {
-  color: "#aaa",
-  fontSize: "12px",
-};
-
 const overlayStyle = {
   position: "fixed",
   bottom: "24px",
@@ -63,7 +70,6 @@ const overlayStyle = {
   transform: "translateX(-50%)",
   zIndex: 9999,
 };
-
 const controlBarStyle = {
   background: "#111",
   padding: "14px 20px",
@@ -73,7 +79,6 @@ const controlBarStyle = {
   alignItems: "center",
   gap: "16px",
 };
-
 const endBtn = {
   background: "#e53935",
   color: "#fff",

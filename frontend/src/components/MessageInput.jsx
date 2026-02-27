@@ -1,29 +1,164 @@
 import { useEffect, useRef, useState } from "react";
-import { Image, Send, X, Clock } from "lucide-react";
+import {
+  Paperclip,
+  Send,
+  X,
+  Clock,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import "./MessageInput.css";
+
+/* ================= DATE/TIME PICKER HELPERS ================= */
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+function getDaysInMonth(year, month1To12) {
+  return new Date(year, month1To12, 0).getDate();
+}
+
+/** Clamp datetime to the current moment so past times cannot be set. */
+function clampToFuture(year, month1To12, day, hours, minutes, seconds) {
+  const maxDay = getDaysInMonth(year, month1To12);
+  const safeDay = Math.min(day, maxDay);
+  const d = new Date(year, month1To12 - 1, safeDay, hours, minutes, seconds);
+  const now = new Date();
+  if (d.getTime() <= now.getTime()) {
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      day: now.getDate(),
+      hours: now.getHours(),
+      minutes: now.getMinutes(),
+      seconds: now.getSeconds(),
+    };
+  }
+  return { year, month: month1To12, day: safeDay, hours, minutes, seconds };
+}
 
 /* ================= UTIL ================= */
 
 export const formatDuration = (ms) => {
   let total = Math.max(0, Math.floor(ms / 1000));
 
-  const days = Math.floor(total / 86400);
-  total %= 86400;
-  const hrs = Math.floor(total / 3600);
+  const hours = Math.floor(total / 3600);
   total %= 3600;
   const mins = Math.floor(total / 60);
   const secs = total % 60;
 
-  const parts = [];
-  if (days) parts.push(`${days} day`);
-  if (hrs) parts.push(`${hrs} hr`);
-  if (mins) parts.push(`${mins} min`);
-  parts.push(`${secs} sec`);
-
-  return parts.join(" ");
+  const h = String(hours).padStart(2, "0");
+  const m = String(mins).padStart(2, "0");
+  const s = String(secs).padStart(2, "0");
+  return `${h}h ${m}m ${s}s`;
 };
+
+const ITEM_HEIGHT = 28;
+
+function DurationWheelColumn({ value, max, label, onChange, format }) {
+  const formatItem = format
+    ? (i) => format(i)
+    : (i) => String(i).padStart(2, "0");
+  const wheelAccumRef = useRef(0);
+  const prevValueRef = useRef(value);
+  const [slideDir, setSlideDir] = useState(null);
+
+  useEffect(() => {
+    if (slideDir === null) return;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setSlideDir(null));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [slideDir]);
+
+  const prevVal = value === 0 ? max : value - 1;
+  const nextVal = value === max ? 0 : value + 1;
+  const displayValues = [prevVal, value, nextVal];
+
+  const triggerSlide = (dir) => {
+    setSlideDir(dir);
+    prevValueRef.current = value;
+  };
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const THRESHOLD = 40;
+    wheelAccumRef.current += e.deltaY;
+    if (wheelAccumRef.current >= THRESHOLD) {
+      wheelAccumRef.current = 0;
+      const next = value === max ? 0 : value + 1;
+      onChange(next);
+      triggerSlide("up");
+    } else if (wheelAccumRef.current <= -THRESHOLD) {
+      wheelAccumRef.current = 0;
+      const prev = value === 0 ? max : value - 1;
+      onChange(prev);
+      triggerSlide("down");
+    }
+  };
+
+  const goUp = () => {
+    const next = value === max ? 0 : value + 1;
+    onChange(next);
+    triggerSlide("up");
+  };
+  const goDown = () => {
+    const prev = value === 0 ? max : value - 1;
+    onChange(prev);
+    triggerSlide("down");
+  };
+
+  const stripClass = [
+    "duration-wheel__strip",
+    slideDir === "up" && "duration-wheel__strip--slide-from-up",
+    slideDir === "down" && "duration-wheel__strip--slide-from-down",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div className="duration-wheel__col">
+      <div className="duration-wheel__label">{label}</div>
+      <button
+        type="button"
+        className="duration-wheel__arrow duration-wheel__arrow--up"
+        onClick={goDown}
+        aria-label={`Increase ${label}`}
+      >
+        <ChevronUp size={14} />
+      </button>
+      <div
+        className="duration-wheel__viewport"
+        onWheel={handleWheel}
+        role="region"
+        aria-label={`Set ${label}`}
+      >
+        <div className={stripClass}>
+          {displayValues.map((v, idx) => (
+            <div
+              key={idx}
+              className={`duration-wheel__item ${idx === 1 ? "duration-wheel__item--selected" : ""}`}
+              style={{ height: ITEM_HEIGHT }}
+            >
+              {formatItem(v)}
+            </div>
+          ))}
+        </div>
+      </div>
+      <button
+        type="button"
+        className="duration-wheel__arrow duration-wheel__arrow--down"
+        onClick={goUp}
+        aria-label={`Decrease ${label}`}
+      >
+        <ChevronDown size={14} />
+      </button>
+    </div>
+  );
+}
 
 /* ================= COMPONENT ================= */
 
@@ -37,6 +172,7 @@ const MessageInput = () => {
 
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [attachedFileName, setAttachedFileName] = useState("");
 
   const [showPicker, setShowPicker] = useState(false);
   const [mode, setMode] = useState("datetime"); // duration | datetime
@@ -47,11 +183,34 @@ const MessageInput = () => {
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
 
-  // datetime
-  const [dateTime, setDateTime] = useState("");
+  // datetime (year, month 1-12, day 1-31, hours 0-23, minutes 0-59, seconds 0-59)
+  const defaultDt = () => {
+    const d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+      hours: d.getHours(),
+      minutes: 0,
+      seconds: 0,
+    };
+  };
+  const [dtYear, setDtYear] = useState(() => defaultDt().year);
+  const [dtMonth, setDtMonth] = useState(() => defaultDt().month);
+  const [dtDay, setDtDay] = useState(() => defaultDt().day);
+  const [dtHours, setDtHours] = useState(() => defaultDt().hours);
+  const [dtMinutes, setDtMinutes] = useState(() => defaultDt().minutes);
+  const [dtSeconds, setDtSeconds] = useState(() => defaultDt().seconds);
+
+  // after user changes hours/minutes/seconds once, show time row above date row
+  const [hasPickedTimeOnce, setHasPickedTimeOnce] = useState(false);
 
   // preview only (NOT sent)
   const [previewMs, setPreviewMs] = useState(null);
+  const [previewSetByDateTime, setPreviewSetByDateTime] = useState(false);
+  const [previewTargetTs, setPreviewTargetTs] = useState(null);
+  const [previewTick, setPreviewTick] = useState(0);
 
   /* ================= CLICK OUTSIDE ================= */
 
@@ -65,24 +224,73 @@ const MessageInput = () => {
     return () => window.removeEventListener("mousedown", close);
   }, []);
 
+  /* Tick preview countdown every second only for date/time mode (duration countdown starts on send) */
+  useEffect(() => {
+    if (!previewMs || !previewSetByDateTime) return;
+    const i = setInterval(() => setPreviewTick((t) => t + 1), 1000);
+    return () => clearInterval(i);
+  }, [previewMs, previewSetByDateTime]);
+
+  /* Clamp datetime to future when opening Date & Time tab */
+  useEffect(() => {
+    if (showPicker && mode === "datetime") {
+      const c = clampToFuture(
+        dtYear,
+        dtMonth,
+        dtDay,
+        dtHours,
+        dtMinutes,
+        dtSeconds,
+      );
+      if (
+        c.year !== dtYear ||
+        c.month !== dtMonth ||
+        c.day !== dtDay ||
+        c.hours !== dtHours ||
+        c.minutes !== dtMinutes ||
+        c.seconds !== dtSeconds
+      ) {
+        setDtYear(c.year);
+        setDtMonth(c.month);
+        setDtDay(c.day);
+        setDtHours(c.hours);
+        setDtMinutes(c.minutes);
+        setDtSeconds(c.seconds);
+      }
+    }
+  }, [showPicker, mode]);
+
   /* ================= BLOCK ================= */
 
-  const isBlocked =
-    selectedChat &&
-    selectedChat.createdBy !== authUser?._id &&
-    !selectedChat.acceptedBy;
+  /** Receiver sees Accept/Reject until they accept; messaging is allowed on both devices (no block). */
+  const createdById = selectedChat?.createdBy?._id ?? selectedChat?.createdBy;
+  const isReceiver = authUser?._id && selectedChat && String(createdById) !== String(authUser._id);
+  const showAcceptReject =
+    selectedChat && !selectedChat.acceptedBy && isReceiver;
 
-  /* ================= IMAGE ================= */
+  /** When chat is pending (not accepted): no file or timer — text only, on both devices */
+  const isPendingChat = selectedChat && !selectedChat.acceptedBy;
+  const fileAndTimerDisabled = isPendingChat;
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file || !file.type.startsWith("image/")) {
-      toast.error("Invalid image");
+  useEffect(() => {
+    if (fileAndTimerDisabled) setShowPicker(false);
+  }, [fileAndTimerDisabled]);
+
+  /* ================= FILE (any type) ================= */
+  const handleFileChange = (e) => {
+    if (fileAndTimerDisabled) {
+      e.target.value = "";
       return;
     }
+    const file = e.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+      setAttachedFileName(file.name);
+    };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   /* ================= APPLY TIMER ================= */
@@ -91,7 +299,7 @@ const MessageInput = () => {
     let ms = null;
 
     if (mode === "duration") {
-      ms = days * 86400000 + hours * 3600000 + minutes * 60000 + seconds * 1000;
+      ms = hours * 3600000 + minutes * 60000 + seconds * 1000;
 
       if (ms <= 0) {
         toast.error("Timer must be > 0");
@@ -100,15 +308,26 @@ const MessageInput = () => {
     }
 
     if (mode === "datetime") {
-      const target = new Date(dateTime).getTime();
-      if (!target || target <= Date.now()) {
-        toast.error("Choose a future time");
+      const maxDay = getDaysInMonth(dtYear, dtMonth);
+      const day = Math.min(dtDay, maxDay);
+      const target = new Date(
+        dtYear,
+        dtMonth - 1,
+        day,
+        dtHours,
+        dtMinutes,
+        dtSeconds,
+      ).getTime();
+      if (target <= Date.now()) {
+        toast.error("Choose a future date and time");
         return;
       }
       ms = target - Date.now();
     }
 
     setPreviewMs(ms);
+    setPreviewSetByDateTime(mode === "datetime");
+    setPreviewTargetTs(Date.now() + ms);
     setShowPicker(false);
   };
 
@@ -117,15 +336,20 @@ const MessageInput = () => {
   const handleSend = async (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
+    if (fileAndTimerDisabled && (imagePreview || previewMs)) {
+      toast.error("File and timer are available after chat is accepted");
+      return;
+    }
 
     // 🔥 TIMER STARTS HERE
-    const revealAt = previewMs ? Date.now() + previewMs : null;
+    const revealAt = fileAndTimerDisabled ? null : (previewMs ? Date.now() + previewMs : null);
 
     await sendMessage({
       receiverId: selectedUser._id,
       conversationId: selectedChat._id,
       text: text.trim(),
-      image: imagePreview,
+      image: fileAndTimerDisabled ? undefined : imagePreview,
+      fileName: fileAndTimerDisabled ? undefined : (attachedFileName || undefined),
       revealAt,
       revealed: !revealAt,
     });
@@ -133,91 +357,131 @@ const MessageInput = () => {
     // reset
     setText("");
     setImagePreview(null);
+    setAttachedFileName("");
     setPreviewMs(null);
-    setDays(0);
+    setPreviewSetByDateTime(false);
+    setPreviewTargetTs(null);
     setHours(0);
     setMinutes(0);
     setSeconds(0);
-    setDateTime("");
+    const def = defaultDt();
+    setDtYear(def.year);
+    setDtMonth(def.month);
+    setDtDay(def.day);
+    setDtHours(def.hours);
+    setDtMinutes(def.minutes);
+    setDtSeconds(def.seconds);
   };
 
   /* ================= RENDER ================= */
 
   return (
-    <div className="relative p-4 bg-white">
-      {/* TIMER INFO */}
+    <div className="message-input-ref relative">
       {previewMs && (
-        <div className="mb-2 text-xs text-gray-600">
-          ⏰ Reveals in {formatDuration(previewMs)}
-        </div>
-      )}
-
-      {/* IMAGE PREVIEW */}
-      {imagePreview && (
-        <div className="mb-3 relative w-20">
-          <img src={imagePreview} className="rounded-lg" />
+        <div className="message-input-ref__timer-info">
+          <span className="message-input-ref__timer-info-text">
+            {previewSetByDateTime
+              ? (() => {
+                  const d = new Date(Date.now() + previewMs);
+                  const dateStr = d.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  });
+                  const timeStr = d.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+                  return `Reveal on ${dateStr} at ${timeStr}`;
+                })()
+              : (() => {
+                  const remaining =
+                    previewSetByDateTime && previewTargetTs != null
+                      ? Math.max(0, previewTargetTs - Date.now())
+                      : previewMs;
+                  return `Reveals in ${formatDuration(remaining)}`;
+                })()}
+          </span>
           <button
-            onClick={() => setImagePreview(null)}
-            className="absolute -top-1 -right-1 bg-white rounded-full"
+            type="button"
+            onClick={() => {
+              setPreviewMs(null);
+              setPreviewSetByDateTime(false);
+              setPreviewTargetTs(null);
+            }}
+            className="message-input-ref__timer-clear"
+            aria-label="Remove scheduled time"
           >
             <X size={14} />
           </button>
         </div>
       )}
 
-      {/* INPUT */}
-      <form onSubmit={handleSend} className="flex gap-2 items-center">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={isBlocked}
-          className="flex-1 input input-bordered"
-          placeholder={isBlocked ? "Accept chat to reply" : "Type a message…"}
-        />
+      {imagePreview && (
+        <div className="message-input-ref__preview">
+          {imagePreview.startsWith("data:image/") ? (
+            <img src={imagePreview} alt="Preview" />
+          ) : (
+            <span className="message-input-ref__file-name">
+              {attachedFileName || "File attached"}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setImagePreview(null);
+              setAttachedFileName("");
+            }}
+            className="message-input-ref__preview-remove"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
-        <button
-          type="button"
-          onClick={() => setShowPicker((v) => !v)}
-          className="btn btn-circle"
-        >
-          <Clock size={18} />
-        </button>
-
+      <form onSubmit={handleSend} className="message-input-ref__bar">
         <input
           type="file"
           ref={fileInputRef}
           hidden
-          accept="image/*"
-          onChange={handleImageChange}
+          accept="*/*"
+          onChange={handleFileChange}
         />
         <button
           type="button"
-          className="btn btn-circle"
-          onClick={() => fileInputRef.current?.click()}
+          className={`message-input-ref__attach ${fileAndTimerDisabled ? "message-input-ref__attach--disabled" : ""}`}
+          onClick={() => !fileAndTimerDisabled && fileInputRef.current?.click()}
+          aria-label="Attach"
+          disabled={fileAndTimerDisabled}
+          title={fileAndTimerDisabled ? "Available after chat is accepted" : "Attach"}
         >
-          <Image size={18} />
+          <Paperclip size={20} />
         </button>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="message-input-ref__input"
+          placeholder="Your message"
+        />
 
-        <button type="submit" className="btn btn-circle">
-          <Send size={18} />
-        </button>
-      </form>
-
-      {/* TIMER PICKER */}
-      {showPicker && (
         <div
+          className="message-input-ref__extra message-input-ref__extra--has-picker"
           ref={pickerRef}
-          className="absolute bottom-16 left-2 bg-white shadow-xl rounded-lg p-3 z-50 w-80"
         >
-          <div className="flex gap-2 mb-4">
+          {showPicker && (
+            <div className={`timer-picker ${previewMs ? "timer-picker--shift-up" : ""}`}>
+              <div className="timer-picker__tabs">
             <button
-              className={`btn btn-xs ${mode === "datetime" && "btn-active"}`}
+                  type="button"
+                  className={`timer-picker__tab ${mode === "datetime" ? "timer-picker__tab--active" : ""}`}
               onClick={() => setMode("datetime")}
             >
               Date & Time
             </button>
             <button
-              className={`btn btn-xs ${mode === "duration" && "btn-active"}`}
+                  type="button"
+                  className={`timer-picker__tab ${mode === "duration" ? "timer-picker__tab--active" : ""}`}
               onClick={() => setMode("duration")}
             >
               Duration
@@ -225,77 +489,373 @@ const MessageInput = () => {
           </div>
 
           {mode === "duration" && (
-            <>
-              <div className="grid grid-cols-3 gap-2">
-                <p>Hour</p>
-                <p>Minutes</p>
-                <p>Seconds</p>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Hrs"
+                <div className="timer-picker__duration">
+                  <div className="duration-wheel">
+                    <DurationWheelColumn
                   value={hours}
-                  onChange={(e) => setHours(+e.target.value)}
-                  className="input input-sm"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Min"
+                      max={23}
+                      label="h"
+                      onChange={setHours}
+                      format={(v) => String(v).padStart(2, "0") + "h"}
+                    />
+                    <DurationWheelColumn
                   value={minutes}
-                  onChange={(e) => setMinutes(+e.target.value)}
-                  className="input input-sm"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Sec"
+                      max={59}
+                      label="m"
+                      onChange={setMinutes}
+                      format={(v) => String(v).padStart(2, "0") + "m"}
+                    />
+                    <DurationWheelColumn
                   value={seconds}
-                  onChange={(e) => setSeconds(+e.target.value)}
-                  className="input input-sm"
-                />
+                      max={59}
+                      label="s"
+                      onChange={setSeconds}
+                      format={(v) => String(v).padStart(2, "0") + "s"}
+                    />
               </div>
-            </>
+                </div>
           )}
 
           {mode === "datetime" && (
-            <>
-              <div className="grid grid-cols-1">
-                <p>Date & Time</p>
+                <div className="timer-picker__datetime">
+                  <div className="timer-picker__duration timer-picker__duration--datetime">
+                    {hasPickedTimeOnce ? (
+                      <>
+                        <div className="duration-wheel">
+                      <DurationWheelColumn
+                        value={dtHours}
+                        max={23}
+                        label="Hours"
+                        onChange={(v) => {
+                          setHasPickedTimeOnce(true);
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            dtDay,
+                            v,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                      />
+                      <DurationWheelColumn
+                        value={dtMinutes}
+                        max={59}
+                        label="Minutes"
+                        onChange={(v) => {
+                          setHasPickedTimeOnce(true);
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            dtDay,
+                            dtHours,
+                            v,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                      />
+                      <DurationWheelColumn
+                        value={dtSeconds}
+                        max={59}
+                        label="Seconds"
+                        onChange={(v) => {
+                          setHasPickedTimeOnce(true);
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            dtDay,
+                            dtHours,
+                            dtMinutes,
+                            v,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                      />
+                    </div>
+                        <div className="duration-wheel duration-wheel--row">
+                      <DurationWheelColumn
+                        value={dtYear - CURRENT_YEAR}
+                        max={20}
+                        label="Year"
+                        onChange={(v) => {
+                          const y = CURRENT_YEAR + v;
+                          const c = clampToFuture(
+                            y,
+                            dtMonth,
+                            dtDay,
+                            dtHours,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                        format={(v) => String(CURRENT_YEAR + v)}
+                      />
+                      <DurationWheelColumn
+                        value={dtMonth - 1}
+                        max={11}
+                        label="Month"
+                        onChange={(v) => {
+                          const m = v + 1;
+                          const c = clampToFuture(
+                            dtYear,
+                            m,
+                            dtDay,
+                            dtHours,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                        format={(v) => String(v + 1).padStart(2, "0")}
+                      />
+                      <DurationWheelColumn
+                        value={
+                          Math.min(dtDay, getDaysInMonth(dtYear, dtMonth)) - 1
+                        }
+                        max={30}
+                        label="Date"
+                        onChange={(v) => {
+                          const d = v + 1;
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            d,
+                            dtHours,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                        format={(v) => String(v + 1).padStart(2, "0")}
+                      />
               </div>
-              <input
-                type="datetime-local"
-                min={new Date().toISOString().slice(0, 16)}
-                value={dateTime}
-                onChange={(e) => setDateTime(e.target.value)}
-                className="input input-sm w-full"
-              />
-            </>
+                      </>
+                    ) : (
+                      <>
+                    <div className="duration-wheel duration-wheel--row">
+                      <DurationWheelColumn
+                        value={dtYear - CURRENT_YEAR}
+                        max={20}
+                        label="Year"
+                        onChange={(v) => {
+                          const y = CURRENT_YEAR + v;
+                          const c = clampToFuture(
+                            y,
+                            dtMonth,
+                            dtDay,
+                            dtHours,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                        format={(v) => String(CURRENT_YEAR + v)}
+                      />
+                      <DurationWheelColumn
+                        value={dtMonth - 1}
+                        max={11}
+                        label="Month"
+                        onChange={(v) => {
+                          const m = v + 1;
+                          const c = clampToFuture(
+                            dtYear,
+                            m,
+                            dtDay,
+                            dtHours,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                        format={(v) => String(v + 1).padStart(2, "0")}
+                      />
+                      <DurationWheelColumn
+                        value={
+                          Math.min(dtDay, getDaysInMonth(dtYear, dtMonth)) - 1
+                        }
+                        max={30}
+                        label="Date"
+                        onChange={(v) => {
+                          const d = v + 1;
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            d,
+                            dtHours,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                        format={(v) => String(v + 1).padStart(2, "0")}
+                      />
+              </div>
+                    <div className="duration-wheel">
+                      <DurationWheelColumn
+                        value={dtHours}
+                        max={23}
+                        label="Hours"
+                        onChange={(v) => {
+                          setHasPickedTimeOnce(true);
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            dtDay,
+                            v,
+                            dtMinutes,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                      />
+                      <DurationWheelColumn
+                        value={dtMinutes}
+                        max={59}
+                        label="Minutes"
+                        onChange={(v) => {
+                          setHasPickedTimeOnce(true);
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            dtDay,
+                            dtHours,
+                            v,
+                            dtSeconds,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                      />
+                      <DurationWheelColumn
+                        value={dtSeconds}
+                        max={59}
+                        label="Seconds"
+                        onChange={(v) => {
+                          setHasPickedTimeOnce(true);
+                          const c = clampToFuture(
+                            dtYear,
+                            dtMonth,
+                            dtDay,
+                            dtHours,
+                            dtMinutes,
+                            v,
+                          );
+                          setDtYear(c.year);
+                          setDtMonth(c.month);
+                          setDtDay(c.day);
+                          setDtHours(c.hours);
+                          setDtMinutes(c.minutes);
+                          setDtSeconds(c.seconds);
+                        }}
+                      />
+                    </div>
+                      </>
+                    )}
+                  </div>
+                </div>
           )}
 
           <button
+                type="button"
             onClick={applyTimer}
-            className="btn btn-sm btn-primary w-full mt-3"
+                className="timer-picker__submit"
           >
             Set Timer
           </button>
         </div>
       )}
-
-      {/* ACCEPT / REJECT */}
-      {isBlocked && (
-        <div className="flex gap-2 mt-2">
           <button
+            type="button"
+            onClick={() => !fileAndTimerDisabled && setShowPicker((v) => !v)}
+            className={`message-input-ref__attach ${fileAndTimerDisabled ? "message-input-ref__attach--disabled" : ""}`}
+            aria-label="Schedule"
+            disabled={fileAndTimerDisabled}
+            title={fileAndTimerDisabled ? "Available after chat is accepted" : "Schedule"}
+          >
+            <Clock size={18} />
+          </button>
+        </div>
+
+        <button
+          type="submit"
+          className="message-input-ref__send"
+          disabled={!text.trim() && !imagePreview}
+          aria-label="Send"
+        >
+          <Send size={20} />
+        </button>
+      </form>
+
+      {showAcceptReject && (
+        <div className="message-input-ref__accept-reject">
+          <button
+            type="button"
+            className="accept"
             onClick={() => acceptChat(selectedChat._id)}
-            className="btn btn-success btn-sm"
           >
             Accept
           </button>
           <button
+            type="button"
+            className="reject"
             onClick={() => rejectChat(selectedChat._id)}
-            className="btn btn-error btn-sm"
           >
             Reject
           </button>

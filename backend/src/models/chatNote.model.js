@@ -26,7 +26,7 @@ const chatNoteSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 chatNoteSchema.index({ userId: 1, chatId: 1, messageId: 1 }, { unique: true });

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { unlockRemoteAudio } from "../store/useAudioCall";
 
 function IncomingCallModal({ caller, onAccept, onReject }) {
   const overlay = {
@@ -91,10 +90,7 @@ function IncomingCallModal({ caller, onAccept, onReject }) {
           </button>
           <button
             style={acceptBtn}
-            onClick={() => {
-              unlockRemoteAudio();
-              onAccept();
-            }}
+            onClick={() => onAccept()}
           >
             📞 Accept
           </button>

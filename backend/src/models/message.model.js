@@ -40,6 +40,10 @@ const messageSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    fileName: {
+      type: String,
+      default: "",
+    },
     revealAt: {
       type: Date,
       default: null,

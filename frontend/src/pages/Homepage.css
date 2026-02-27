@@ -1,3 +1,32 @@
+/* ================= APP SHELL (reference UI) ================= */
+
+.app-shell {
+  background: #f1f5f9;
+}
+
+/* Main card: holds sidebar + chat block; black background */
+.app-shell .app-card {
+  display: flex;
+  gap: 0;
+  background: #000;
+  border-radius: 30px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* Combined block: chat list + main chat as one separate block (not the dark sidebar) */
+.app-content-wrap {
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+  border-bottom-right-radius: 30px;
+  border-bottom-left-radius: 30px;
+  overflow: hidden;
+  background: #fff;
+  border: 5px solid #000;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+}
+
 /* ================= CHAT LAYOUT ================= */
 
 .chat-layout {
@@ -15,9 +44,10 @@
   min-width: 0;
 }
 
-/* NORMAL MODE (no screen share) */
-.chat-layout:not(.sharing) > * {
-  width: 100%;
+/* Chat area takes remaining space; Notes panel (when open) gets its 25% without overlapping */
+.chat-layout:not(.sharing) > *:first-child {
+  flex: 1;
+  min-width: 0;
 }
 
 /* SCREEN SHARE MODE */

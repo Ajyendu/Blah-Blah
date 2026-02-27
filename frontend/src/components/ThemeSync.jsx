@@ -15,6 +15,8 @@ const ThemeSync = () => {
 
     root.style.setProperty("--app-bg", theme.appBg);
     root.style.setProperty("--primary", theme.primary);
+    root.style.setProperty("--accent", theme.accent);
+    root.style.setProperty("--accent-dark", theme.accentDark || theme.accent);
     root.style.setProperty("--bubble-mine", theme.bubbleMine);
     root.style.setProperty("--bubble-other", theme.bubbleOther);
     root.style.setProperty("--text-primary", theme.textPrimary);

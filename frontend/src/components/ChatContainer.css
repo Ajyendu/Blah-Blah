@@ -1,0 +1,367 @@
+/* ================= CHAT REF (reference UI) ================= */
+
+.chat-container-ref {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 8px;
+  background: transparent;
+  border-radius: 12px 12px 0 0;
+}
+
+/* Persistent "other user is playing" indicator when B is in chat (not in game panel) */
+.chat-playing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #000;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.chat-container-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-container-wrap--with-indicator .chat-container-ref {
+  padding-top: 52px;
+}
+
+.chat-playing-indicator--overlay {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.chat-playing-indicator__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #eab308;
+  box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.35);
+  flex-shrink: 0;
+  animation: chat-playing-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes chat-playing-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.chat-playing-indicator__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-playing-indicator__btn {
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.chat-playing-indicator__btn:hover {
+  background: var(--accent-dark);
+}
+
+/* Message row: avatar + bubble (avatar left for theirs, right for mine) */
+.msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 85%;
+  margin-bottom: 2px;
+}
+.msg-row--mine {
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+.msg-row--theirs {
+  margin-right: auto;
+}
+
+.msg-row__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Bubbles: text fully inside, equal padding on all sides */
+.msg-bubble-ref {
+  display: block;
+  width: fit-content;
+  max-width: 75%;
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+  border-radius: 16px;
+  word-wrap: break-word;
+  text-align: center;
+  overflow: visible;
+  min-width: min-content;
+}
+
+.msg-bubble-ref--mine {
+  background: var(--accent);
+  color: #fff;
+}
+
+.msg-bubble-ref--theirs {
+  background: #fdf2f8;
+  color: #1e293b;
+  border: none;
+}
+
+/* Message saved as note: black background, white text in chatbox */
+.msg-bubble-ref--note.msg-bubble-ref--mine,
+.msg-bubble-ref--note.msg-bubble-ref--theirs {
+  background: #000;
+  color: #fff;
+}
+
+/* Wrapper for bubble + seen line - full width of row so bubble max-width % resolves */
+.msg-bubble-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.msg-bubble-wrapper:has(.msg-bubble-ref--theirs) {
+  align-items: flex-start;
+}
+
+/* Seen text: one line, smaller, below bubble */
+.msg-seen-below {
+  font-size: 9px;
+  opacity: 0.7;
+  margin-top: 3px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.msg-seen-below--mine {
+  color: #64748b;
+  text-align: right;
+}
+.msg-seen-below--theirs {
+  color: #94a3b8;
+  text-align: left;
+}
+
+.chat-container-ref .message-menu {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+/* My messages: keep three-dots + bubble group on the right */
+.msg-row--mine .message-menu {
+  justify-content: flex-end;
+}
+
+/* Three-dots menu: immediately before the message bubble */
+.msg-three-dots-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+.msg-three-dots-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Message dropdown (Delete, Mark note, timestamp) */
+.msg-dropdown {
+  min-width: 130px;
+  padding: 4px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.msg-dropdown__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.msg-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  margin: 0;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  box-sizing: border-box;
+}
+
+.msg-dropdown__item:hover {
+  background: #e0f2fe;
+  padding: 6px 10px;
+}
+
+.msg-dropdown__item--danger {
+  color: #dc2626;
+}
+
+.msg-dropdown__item--danger:hover {
+  background: #fee2e2;
+}
+
+.msg-dropdown__item--muted {
+  padding: 5px 10px 6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #64748b;
+  cursor: default;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 1px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.msg-dropdown__item--muted:hover {
+  background: none;
+}
+
+.msg-dropdown__item--muted-left {
+  padding: 5px 10px 6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #64748b;
+  cursor: default;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 1px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.msg-dropdown__item--muted-left:hover {
+  background: none;
+}
+
+.msg-dropdown__icon {
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.msg-dropdown__item .msg-dropdown__icon {
+  color: #64748b;
+}
+
+.msg-dropdown__item--danger .msg-dropdown__icon {
+  color: #dc2626;
+}
+
+/* Wrapper only as wide as the bubble so three-dots and bubble sit close */
+.chat-container-ref .message-menu .msg-bubble-wrapper {
+  flex: 0 0 auto;
+  width: fit-content;
+  min-width: min-content;
+}
+
+/* Inner MessageItem: no extra bubble styling, text never clipped */
+.msg-bubble-ref .message-bubble,
+.msg-bubble-ref .sender-bubble,
+.msg-bubble-ref .receiver-bubble {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: inherit;
+  overflow: visible;
+}
+
+/* Inner content: size to text so short messages stay on one line */
+.msg-bubble-ref--theirs .flex.flex-col.items-start,
+.msg-bubble-ref--mine .flex.flex-col.items-end {
+  width: fit-content;
+  max-width: 100%;
+  min-width: max-content;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+.msg-bubble-ref--theirs .message-bubble,
+.msg-bubble-ref--theirs .receiver-bubble,
+.msg-bubble-ref--mine .message-bubble,
+.msg-bubble-ref--mine .sender-bubble {
+  width: fit-content;
+  max-width: 100%;
+  min-width: max-content;
+  box-sizing: border-box;
+}
+/* Text: full text visible, no clip; short messages stay one line */
+.msg-bubble-ref .message-bubble > div:first-child {
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-word;
+  min-width: max-content;
+  overflow: visible;
+  white-space: pre-wrap;
+}
+
+.msg-attachment-link {
+  display: block;
+  margin-top: 6px;
+}
+.msg-attachment-img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  display: block;
+}
+.msg-attachment-file {
+  font-size: 13px;
+  text-decoration: underline;
+}
+

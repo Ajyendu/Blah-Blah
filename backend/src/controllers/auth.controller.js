@@ -105,7 +105,7 @@ export const checkAuth = async (req, res) => {
   }
 
   const user = await User.findById(req.user._id).select(
-    "_id fullName email profilePic userCode"
+    "_id fullName email profilePic userCode",
   );
 
   if (!user) {
@@ -117,20 +117,45 @@ export const checkAuth = async (req, res) => {
 
 // ================== UPDATE PROFILE ==================
 export const updateProfile = async (req, res) => {
-  const { profilePic } = req.body;
+  const { profilePic, fullName } = req.body;
   const userId = req.user._id;
 
   try {
-    const upload = await cloudinary.uploader.upload(profilePic);
+    const updates = {};
+    if (typeof fullName === "string" && fullName.trim()) {
+      updates.fullName = fullName.trim();
+    }
+    if (profilePic) {
+      const upload = await cloudinary.uploader.upload(profilePic);
+      updates.profilePic = upload.secure_url;
+    }
+    if (Object.keys(updates).length === 0) {
+      const user = await User.findById(userId).select(
+        "_id fullName email profilePic userCode",
+      );
+      return res.status(200).json(user);
+    }
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { profilePic: upload.secure_url },
-      { new: true }
-    );
+      updates,
+      { new: true },
+    ).select("_id fullName email profilePic userCode");
 
-    res.status(200).json(updatedUser);
+// ================== DELETE ACCOUNT ==================
+export const deleteAccount = async (req, res) => {
+  const userId = req.user._id;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await User.findByIdAndDelete(userId);
+    res.cookie("jwt", "", { maxAge: 0 });
+    res.status(200).json({ message: "Account deleted successfully" });
   } catch (err) {
-    console.error("Profile update error:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Delete account error:", err);
+    res.status(500).json({ message: "Failed to delete account" });
   }
 };

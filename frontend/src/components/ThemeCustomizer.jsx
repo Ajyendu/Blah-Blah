@@ -1,13 +1,17 @@
 import { useThemeStore } from "../store/useThemeStore";
 
-const ColorPicker = ({ label, value, onChange }) => (
-  <div className="flex items-center justify-between gap-4">
-    <span className="text-sm">{label}</span>
+const ColorPicker = ({ label, value, onChange, description }) => (
+  <div className="theme-picker-row">
+    <div>
+      <span className="theme-picker-label">{label}</span>
+      {description && <p className="theme-picker-desc">{description}</p>}
+    </div>
     <input
       type="color"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-10 h-10 rounded cursor-pointer"
+      className="theme-picker-input"
+      aria-label={label}
     />
   </div>
 );
@@ -19,52 +23,51 @@ const ThemeCustomizer = () => {
   if (!theme) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="p-4 border rounded-xl">
-        <h3 className="font-semibold mb-3">Website</h3>
+    <div className="theme-customizer">
+      <div className="theme-section">
+        <h3 className="theme-section-title">Page elements & background</h3>
         <ColorPicker
-          label="Page Background"
-          value={theme.pageBg}
-          onChange={(v) => setThemeValue("pageBg", v)}
+          label="Page elements (accent)"
+          description="Sidebar, buttons, links — the pink parts"
+          value={theme.accent}
+          onChange={(v) => setThemeValue("accent", v)}
         />
         <ColorPicker
-          label="App Background"
+          label="Darker accent (hover/active)"
+          description="Used for active and hover states"
+          value={theme.accentDark || theme.accent}
+          onChange={(v) => setThemeValue("accentDark", v)}
+        />
+        <ColorPicker
+          label="Background"
+          description="Main app and page background"
           value={theme.appBg}
           onChange={(v) => setThemeValue("appBg", v)}
         />
         <ColorPicker
-          label="Primary"
-          value={theme.primary}
-          onChange={(v) => setThemeValue("primary", v)}
-        />
-        <ColorPicker
-          label="Accent"
-          value={theme.accent}
-          onChange={(v) => setThemeValue("accent", v)}
+          label="Page background"
+          description="Outer page area"
+          value={theme.pageBg}
+          onChange={(v) => setThemeValue("pageBg", v)}
         />
       </div>
 
-      <div className="p-4 border rounded-xl">
-        <h3 className="font-semibold mb-3">Chat</h3>
+      <div className="theme-section">
+        <h3 className="theme-section-title">Chat</h3>
         <ColorPicker
-          label="Chat Background"
+          label="Chat background"
           value={theme.chatBg}
           onChange={(v) => setThemeValue("chatBg", v)}
         />
         <ColorPicker
-          label="My Bubble"
+          label="My bubble"
           value={theme.bubbleMine}
           onChange={(v) => setThemeValue("bubbleMine", v)}
         />
         <ColorPicker
-          label="Other Bubble"
+          label="Other bubble"
           value={theme.bubbleOther}
           onChange={(v) => setThemeValue("bubbleOther", v)}
-        />
-        <ColorPicker
-          label="Text"
-          value={theme.textPrimary}
-          onChange={(v) => setThemeValue("textPrimary", v)}
         />
       </div>
     </div>

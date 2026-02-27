@@ -1,8 +1,10 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import ChatNote from "../models/chatNote.model.js";
 import cloudinary from "../lib/cloudinary.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import { getReceiverSocketId, io, emitToUser } from "../lib/socket.js";
 import Conversation from "../models/conversation.model.js";
+import RejectedRequest from "../models/rejectedRequest.model.js";
 import { generateAIReply } from "../AI/aiService.js";
 
 const aiUsageMap = new Map();
@@ -24,46 +26,55 @@ export const getUsersForSidebar = async (req, res) => {
 export const deleteMessage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { scope } = req.body;
+    const scope = req.body?.scope ?? req.query?.scope;
     const userId = req.user._id;
 
     const message = await Message.findById(id);
     if (!message) return res.status(404).json({ message: "Message not found" });
 
-    if (message.senderId.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
+    const isSender = message.senderId.toString() === userId.toString();
+    const isReceiver =
+      message.receiverId && message.receiverId.toString() === userId.toString();
 
     /* ================= DELETE FOR ME ================= */
     if (scope === "me") {
-      if (!message.deletedFor.includes(userId)) {
+      if (!isSender && !isReceiver) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      if (!message.deletedFor) message.deletedFor = [];
+      if (
+        !message.deletedFor.some((id) => id.toString() === userId.toString())
+      ) {
         message.deletedFor.push(userId);
       }
       await message.save();
+      await ChatNote.deleteMany({ messageId: message._id, userId });
       return res.json({ success: true });
     }
 
     /* ================= DELETE FOR EVERYONE ================= */
     if (scope === "everyone") {
+      if (!isSender) {
+        return res
+          .status(403)
+          .json({ message: "Only the sender can delete for everyone" });
+      }
       message.deleted = true;
       message.deletedBy = userId;
       message.text = "";
       message.image = "";
       await message.save();
 
-      const senderSocket = getReceiverSocketId(message.senderId.toString());
-      const receiverSocket = getReceiverSocketId(message.receiverId.toString());
+      await ChatNote.deleteMany({ messageId: message._id });
 
       const payload = {
         messageId: message._id,
         deletedBy: userId,
       };
 
-      // 🔥 SEND TO BOTH USERS
-      if (senderSocket)
-        io.to(senderSocket).emit("messageDeletedForEveryone", payload);
-      if (receiverSocket)
-        io.to(receiverSocket).emit("messageDeletedForEveryone", payload);
+      // 🔥 SEND TO BOTH USERS (each may have multiple sockets)
+      emitToUser(message.senderId.toString(), "messageDeletedForEveryone", payload);
+      emitToUser(message.receiverId.toString(), "messageDeletedForEveryone", payload);
 
       return res.json({ success: true });
     }
@@ -99,11 +110,11 @@ export const sendMessageByCode = async (req, res) => {
     const senderId = req.user._id;
     const { userCode, text } = req.body;
 
-    if (!userCode || !text?.trim()) {
-      return res.status(400).json({ message: "Invalid request" });
+    if (!userCode?.trim()) {
+      return res.status(400).json({ message: "User code is required" });
     }
 
-    const receiver = await User.findOne({ userCode });
+    const receiver = await User.findOne({ userCode: userCode.trim() });
     if (!receiver) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -112,11 +123,24 @@ export const sendMessageByCode = async (req, res) => {
       return res.status(400).json({ message: "Cannot message yourself" });
     }
 
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentRejection = await RejectedRequest.findOne({
+      requesterId: senderId,
+      rejectorId: receiver._id,
+      rejectedAt: { $gte: twentyFourHoursAgo },
+    });
+    if (recentRejection) {
+      return res.status(403).json({
+        message:
+          "You cannot send a request to this user for 24 hours after they rejected your previous request.",
+      });
+    }
+
     let chat = await Conversation.findOne({
       participants: { $all: [senderId, receiver._id] },
     });
 
-    // 🆕 CREATE PENDING CHAT ON FIRST MESSAGE
+    // 🆕 CREATE PENDING CHAT ON FIRST MESSAGE (or when starting chat with no text)
     if (!chat) {
       chat = await Conversation.create({
         participants: [senderId, receiver._id],
@@ -132,22 +156,20 @@ export const sendMessageByCode = async (req, res) => {
       });
     }
 
-    const message = await Message.create({
-      chatId: chat._id,
-      senderId,
-      receiverId: receiver._id,
-      text,
-    });
+    let message = null;
+    const textTrim = text?.trim();
+    if (textTrim) {
+      message = await Message.create({
+        chatId: chat._id,
+        senderId,
+        receiverId: receiver._id,
+        text: textTrim,
+      });
+      chat.lastMessage = message._id;
+      await chat.save();
+    }
 
-    chat.lastMessage = message._id;
-    await chat.save();
-
-    // 🔔 SOCKET
-    // 🔔 SOCKET (SEND CHAT + MESSAGE)
-    const receiverSocket = getReceiverSocketId(receiver._id.toString());
-    const senderSocket = getReceiverSocketId(senderId.toString());
-
-    // 🔥 populate chat for frontend
+    // 🔔 populate chat for frontend (for response + socket)
     const populatedChat = await Conversation.findById(chat._id)
       .populate("participants", "fullName profilePic userCode")
       .populate("lastMessage");
@@ -157,9 +179,16 @@ export const sendMessageByCode = async (req, res) => {
       message,
     };
 
-    if (receiverSocket) io.to(receiverSocket).emit("newChatMessage", payload);
+    const receiverSocket = getReceiverSocketId(receiver._id.toString());
+    const senderSocket = getReceiverSocketId(senderId.toString());
+    if (receiverSocket.length) {
+      for (const sid of receiverSocket) io.to(sid).emit("newChatMessage", payload);
+    }
+    if (senderSocket.length) {
+      for (const sid of senderSocket) io.to(sid).emit("newChatMessage", payload);
+    }
 
-    if (senderSocket) io.to(senderSocket).emit("newChatMessage", payload);
+    return res.status(200).json({ chat: populatedChat });
   } catch (err) {
     console.error("sendMessageByCode error:", err);
     res.status(500).json({ message: "Internal server error" });
@@ -192,16 +221,13 @@ export const getMessagesByConversation = async (req, res) => {
           receiverId: userId,
           seen: false,
         },
-        { $set: { seen: true, seenAt } }
+        { $set: { seen: true, seenAt } },
       );
 
       unseenMessages.forEach((msg) => {
-        const senderSocket = getReceiverSocketId(msg.senderId.toString());
-        if (senderSocket) {
-          io.to(senderSocket).emit("messageSeen", {
-            messageId: msg._id,
-            seenAt,
-          });
+        const senderSockets = getReceiverSocketId(msg.senderId.toString());
+        for (const sid of senderSockets) {
+          io.to(sid).emit("messageSeen", { messageId: msg._id, seenAt });
         }
       });
     }
@@ -212,6 +238,7 @@ export const getMessagesByConversation = async (req, res) => {
         { visibleTo: { $size: 0 } }, // normal messages
         { visibleTo: userId }, // private visible
       ],
+      deletedFor: { $nin: [userId] }, // exclude messages this user deleted for themselves
     });
 
     const normalized = messages.map((m) => normalizeMessage(m.toObject()));
@@ -226,7 +253,13 @@ export const getMessagesByConversation = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image, conversationId, revealAt } = req.body;
+    const {
+      text,
+      image,
+      fileName: requestedFileName,
+      conversationId,
+      revealAt,
+    } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -235,20 +268,27 @@ export const sendMessage = async (req, res) => {
       return res.status(404).json({ message: "Conversation not found" });
     }
 
-    if (
-      !conversation.acceptedBy &&
-      conversation.createdBy.toString() !== senderId.toString()
-    ) {
-      return res.status(403).json({ message: "Chat not accepted yet" });
-    }
+    // Messaging allowed on both devices (sender and receiver) even when chat not yet accepted
 
     // ================= PRIVATE AI DETECT =================
     const isPrivateAI = text?.trim().toLowerCase().startsWith("@buddy");
 
-    let imageUrl;
+    let imageUrl = "";
+    let savedFileName = "";
     if (image) {
-      const uploadResponse = await cloudinary.uploader.upload(image);
+      const isImage = typeof image === "string" && /^data:image\//i.test(image);
+      const uploadOptions = isImage ? {} : { resource_type: "raw" };
+      const uploadResponse = await cloudinary.uploader.upload(
+        image,
+        uploadOptions,
+      );
       imageUrl = uploadResponse.secure_url;
+      savedFileName =
+        requestedFileName ||
+        (uploadResponse.original_filename && uploadResponse.format
+          ? `${uploadResponse.original_filename}.${uploadResponse.format}`
+          : uploadResponse.original_filename || "") ||
+        "";
     }
 
     const isTimed = !!revealAt;
@@ -260,7 +300,8 @@ export const sendMessage = async (req, res) => {
       senderId,
       receiverId,
       text: text || "",
-      image: imageUrl || "",
+      image: imageUrl,
+      fileName: savedFileName,
       revealAt: isTimed ? new Date(revealAt) : null,
       revealed: !isTimed,
       isPrivateAI,
@@ -271,25 +312,17 @@ export const sendMessage = async (req, res) => {
 
     // ================= SOCKET EMIT =================
     if (!isPrivateAI) {
-      const senderSocket = getReceiverSocketId(senderId.toString());
-      const receiverSocket = getReceiverSocketId(receiverId.toString());
-
-      if (senderSocket) {
-        io.to(senderSocket).emit("new_message", payload);
-      }
-
-      if (receiverSocket) {
-        io.to(receiverSocket).emit("new_message", payload);
-      }
+      emitToUser(senderId.toString(), "new_message", payload);
+      emitToUser(receiverId.toString(), "new_message", payload);
     }
 
     if (isPrivateAI) {
-      const senderSocket = getReceiverSocketId(senderId.toString());
+      const senderSockets = getReceiverSocketId(senderId.toString());
 
       // 🔥 send user message only to sender
-      if (senderSocket) {
-        io.to(senderSocket).emit("new_message", payload);
-        io.to(senderSocket).emit("bot_typing", true);
+      for (const sid of senderSockets) {
+        io.to(sid).emit("new_message", payload);
+        io.to(sid).emit("bot_typing", true);
       }
 
       const cleanPrompt = text.replace(/@buddy/i, "").trim();
@@ -297,8 +330,8 @@ export const sendMessage = async (req, res) => {
       // ================= RATE LIMIT =================
       const lastUsed = aiUsageMap.get(senderId.toString()) || 0;
       if (Date.now() - lastUsed < 3000) {
-        if (senderSocket) {
-          io.to(senderSocket).emit("bot_typing", false);
+        for (const sid of senderSockets) {
+          io.to(sid).emit("bot_typing", false);
         }
         return res.status(429).json({
           message: "Buddy: slow down a bit 🙂",
@@ -374,8 +407,10 @@ export const sendMessage = async (req, res) => {
         aiReply = aiReply.slice(0, 300) + "...";
       }
 
-      if (senderSocket) {
-        io.to(senderSocket).emit("bot_typing", false);
+      if (senderSockets.length) {
+        for (const sid of senderSockets) {
+          io.to(sid).emit("bot_typing", false);
+        }
       }
 
       // ================= BOT MESSAGE =================
@@ -391,8 +426,8 @@ export const sendMessage = async (req, res) => {
 
       const botPayload = normalizeMessage(botMessage.toObject());
 
-      if (senderSocket) {
-        io.to(senderSocket).emit("new_message", botPayload);
+      for (const sid of senderSockets) {
+        io.to(sid).emit("new_message", botPayload);
       }
     }
 

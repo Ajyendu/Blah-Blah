@@ -15,7 +15,9 @@
 }
 
 .timed-media {
-  transition: filter 600ms ease, opacity 300ms ease;
+  transition:
+    filter 600ms ease,
+    opacity 300ms ease;
 }
 
 .timed-media.blurred {
@@ -157,4 +159,106 @@
 /* ✨ Buddy */
 .bot-bubble {
   color: blue;
+}
+
+/* ================= SAVE THE DATE COUNTDOWN ================= */
+
+.countdown-flip {
+  --countdown-bg: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+  --countdown-digit-bg: rgba(255, 255, 255, 0.08);
+  --countdown-digit-border: rgba(255, 255, 255, 0.12);
+  --countdown-text: #e8e8e8;
+  --countdown-muted: #94a3b8;
+  --countdown-accent: #a78bfa;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--countdown-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-align: center;
+  max-width: 180px;
+}
+
+.countdown-flip__title {
+  font-size: 6px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--countdown-accent);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  opacity: 0.95;
+}
+
+.countdown-flip__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.countdown-flip__segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.countdown-flip__digits {
+  display: flex;
+  background: var(--countdown-digit-bg);
+  border: 1px solid var(--countdown-digit-border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  min-width: 20px;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--countdown-text);
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.countdown-flip__digit {
+  line-height: 1.2;
+}
+
+.countdown-flip__label {
+  font-size: 6px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--countdown-muted);
+}
+
+.countdown-flip__colon {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--countdown-muted);
+  opacity: 0.8;
+  align-self: center;
+  margin-top: 0;
+  line-height: 1;
+}
+
+.countdown-flip__datetime {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 8px;
+  color: var(--countdown-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.message-bubble--timed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timed-message-text {
+  font-size: inherit;
+  line-height: 1.4;
+  word-break: break-word;
 }

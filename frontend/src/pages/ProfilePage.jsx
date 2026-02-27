@@ -1,158 +1,182 @@
-import { useState } from "react";
-import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User } from "lucide-react";
-import { useThemeStore } from "../store/useThemeStore";
-import { Copy } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import Sidebar from "../components/Sidebar";
+import { useAuthStore } from "../store/useAuthStore.js";
+import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
 import toast from "react-hot-toast";
+import "./Homepage.css";
+import "./ProfilePage.css";
 
 const ProfilePage = () => {
-  const theme = useThemeStore((s) => s.theme);
-  const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
+  const { authUser, updateProfile, isUpdatingProfile } = useAuthStore();
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(authUser?.fullName ?? "");
+  const fileInputRef = useRef(null);
 
-  const [selectedImg, setSelectedImg] = useState(null);
-  const copyToClipboard = async (text) => {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        // 🔁 Fallback for HTTP / LAN / older browsers
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed"; // avoid scroll jump
-        textArea.style.left = "-9999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-      }
-
-      toast.success("Copied to clipboard!");
-    } catch (err) {
-      console.error("Copy failed", err);
-      toast.error("Failed to copy");
+  useEffect(() => {
+    if (!editingName && authUser?.fullName != null) {
+      setNameValue(authUser.fullName);
     }
-  };
+  }, [authUser?.fullName, editingName]);
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleSaveName = useCallback(() => {
+    setEditingName(false);
+    const trimmed = nameValue?.trim();
+    if (!trimmed || trimmed === authUser?.fullName) return;
+    updateProfile({ fullName: trimmed });
+  }, [nameValue, authUser?.fullName, updateProfile]);
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+  const copyUserId = useCallback(() => {
+    const id = authUser?.userCode ?? authUser?._id ?? "";
+    if (!id) return;
+    navigator.clipboard.writeText(String(id));
+    toast.success("User ID copied to clipboard");
+  }, [authUser?.userCode, authUser?._id]);
 
-    reader.onload = async () => {
-      const base64Image = reader.result;
-      setSelectedImg(base64Image);
-      await updateProfile({ profilePic: base64Image });
-    };
-  };
+  const handleAvatarClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handlePhotoChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please choose an image file");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        if (typeof dataUrl === "string") {
+          updateProfile({ profilePic: dataUrl });
+        }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    },
+    [updateProfile],
+  );
+
+  if (!authUser) {
+    return (
+      <div className="profile-page-shell app-shell h-screen w-screen flex">
+        <div className="app-card flex flex-1 m-6 overflow-hidden">
+          <div className="flex-shrink-0">
+            <Sidebar />
+          </div>
+          <div className="app-content-wrap flex-1 flex min-w-0 items-center justify-center">
+            <p className="text-slate-500">Loading profile…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-screen pt-20">
-      <div className="max-w-2xl mx-auto p-4 py-8">
-        <div className="rounded-xl p-6 space-y-8 shadow-lg">
-          {/* HEADER */}
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold">Profile</h1>
-            <p>Your profile information</p>
-          </div>
-
-          {/* AVATAR */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <img
-                src={selectedImg || authUser.profilePic || "/avatar.png"}
-                alt="Profile"
-                className="size-32 rounded-full object-cover"
-              />
-
-              <label
-                htmlFor="avatar-upload"
-                className={`
-                  absolute bottom-0 right-0
-                  p-2 rounded-full cursor-pointer
-                  transition-all duration-200
-                  ${
-                    isUpdatingProfile ? "animate-pulse pointer-events-none" : ""
+    <div className="profile-page-shell app-shell h-screen w-screen flex">
+      <div className="app-card flex flex-1 m-6 overflow-hidden">
+        <div className="flex-shrink-0">
+          <Sidebar />
+        </div>
+        <div className="app-content-wrap flex-1 flex min-w-0 profile-content-wrap">
+          <div className="profile-card">
+            <div className="profile-content">
+              <div
+                className="profile-avatar-frame"
+                onClick={handleAvatarClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleAvatarClick();
                   }
-                `}
+                }}
+                title="Change profile photo"
+                aria-label="Change profile photo"
               >
-                <Camera className="w-5 h-5 text-white" />
                 <input
+                  ref={fileInputRef}
                   type="file"
-                  id="avatar-upload"
-                  className="hidden"
                   accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={isUpdatingProfile}
+                  onChange={handlePhotoChange}
+                  className="profile-avatar-file-input"
+                  aria-hidden
                 />
-              </label>
-            </div>
-            <div className="bg-base-200 rounded-xl p-4 text-center">
-              <p className="text-sm text-gray-500 mb-1">Your Chat Code</p>
-
-              <div className="flex items-center justify-center gap-2">
-                <span className="font-mono text-lg tracking-wider">
-                  {authUser.userCode}
-                </span>
-
-                <button
-                  onClick={() => copyToClipboard(authUser.userCode)}
-                  className="btn btn-xs btn-ghost"
-                >
-                  <Copy size={16} />
-                </button>
+                {isUpdatingProfile ? (
+                  <div className="profile-avatar-overlay">
+                    <span className="profile-avatar-overlay-text">Updating…</span>
+                  </div>
+                ) : (
+                  <div className="profile-avatar-overlay profile-avatar-overlay-hint">
+                    <span className="profile-avatar-overlay-text">Change photo</span>
+                  </div>
+                )}
+                <img
+                  src={authUser.profilePic || DEFAULT_AVATAR_URL}
+                  alt="Profile"
+                  className="profile-avatar-img"
+                />
               </div>
-
-              <p className="text-xs text-gray-400 mt-2">
-                Share this code to let others message you
-              </p>
-            </div>
-
-            <p className="text-sm">
-              {isUpdatingProfile
-                ? "Uploading..."
-                : "Click the camera icon to update your photo"}
-            </p>
-          </div>
-
-          {/* INFO */}
-          <div className="space-y-6">
-            {/* FULL NAME */}
-            <div className="space-y-1.5">
-              <div className="text-sm flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Full Name
-              </div>
-
-              <p className="px-4 py-2.5 rounded-lg">{authUser?.fullName}</p>
-            </div>
-
-            {/* EMAIL */}
-            <div className="space-y-1.5">
-              <div className="text-sm flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email Address
-              </div>
-
-              <p className="px-4 py-2.5 rounded-lg">{authUser?.email}</p>
-            </div>
-          </div>
-
-          {/* ACCOUNT INFO */}
-          <div className="rounded-xl p-6">
-            <h2 className="text-lg font-medium mb-4">Account Information</h2>
-
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between py-2 border-b">
-                <span>Member Since</span>
-                <span>{authUser.createdAt?.split("T")[0]}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-2">
-                <span>Account Status</span>
-                <span>Active</span>
+              <div className="profile-details">
+                <div className="profile-field profile-name-field">
+                  <div className="profile-name-slot">
+                    {editingName ? (
+                      <input
+                        type="text"
+                        value={nameValue}
+                        onChange={(e) => setNameValue(e.target.value)}
+                        onBlur={handleSaveName}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveName();
+                          if (e.key === "Escape") {
+                            setNameValue(authUser.fullName ?? "");
+                            setEditingName(false);
+                          }
+                        }}
+                        autoFocus
+                        disabled={isUpdatingProfile}
+                        className="profile-name-input"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setEditingName(true)}
+                        className="profile-name-display"
+                        title="Click to edit"
+                      >
+                        {authUser.fullName || "No name"}
+                        <span className="profile-name-hint">Edit</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="profile-field profile-email-field">
+                  <div className="profile-email-block">
+                    <span className="profile-email-label">Email</span>
+                    <span className="profile-email">{authUser.email}</span>
+                  </div>
+                </div>
+                <div className="profile-id-card">
+                  <span className="profile-id-card-label">ID Card</span>
+                  <div className="profile-id-card-row">
+                    <code className="profile-id-value">
+                      {authUser.userCode ?? authUser._id}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={copyUserId}
+                      className="profile-copy-btn"
+                      title="Copy to clipboard"
+                    >
+                      <svg className="profile-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                      Copy
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

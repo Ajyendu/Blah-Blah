@@ -12,6 +12,7 @@ export default defineConfig(async ({ command }) => {
 
   return {
     plugins,
+    envDir: "src/lib",
     server: {
       https: command === "serve",
       host: true,

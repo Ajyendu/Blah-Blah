@@ -1,23 +1,18 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-
+import { Link } from "react-router-dom";
 import {
   Eye,
   EyeOff,
   Loader2,
-  Lock,
   Mail,
-  MessageSquare,
   User,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useThemeStore } from "../store/useThemeStore";
-
-import AuthImagePattern from "../components/AuthImagePattern";
+import AuthLeftPanel from "../components/AuthLeftPanel";
+import "./AuthPage.css";
 import toast from "react-hot-toast";
 
 const SignUpPage = () => {
-  const theme = useThemeStore((s) => s.theme);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -26,8 +21,6 @@ const SignUpPage = () => {
   });
 
   const { signup, isSigningUp } = useAuthStore();
-
-  if (!theme) return null;
 
   const validateForm = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
@@ -42,132 +35,118 @@ const SignUpPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     if (validateForm()) signup(formData);
   };
 
   return (
-    <div
-      className="min-h-screen grid lg:grid-cols-2"
-      style={{ backgroundColor: theme.pageBg }}
-    >
-      {/* LEFT SIDE */}
-      <div className="flex flex-col justify-center items-center p-6 sm:p-12">
-        <div className="w-full max-w-md space-y-8">
-          {/* LOGO */}
-          <div className="text-center mb-8">
-            <div className="flex flex-col items-center gap-2">
-              <div className="size-12 rounded-xl flex items-center justify-center transition-colors">
-                <MessageSquare className="size-6" />
-              </div>
-              <h1 className="text-2xl font-bold mt-2">Create Account</h1>
-              <p>Get started with your free account</p>
-            </div>
-          </div>
+    <div className="auth-page">
+      <Link to="/" className="auth-page__logo" aria-label="Blah Blah">
+        <img src="/logo.png" alt="Blah Blah" className="auth-page__logo-img" />
+      </Link>
+      <div className="auth-card">
+        <AuthLeftPanel />
 
-          {/* FORM */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* FULL NAME */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Full Name</span>
+        <div className="auth-card__right">
+          <h1 className="auth-card__title">Sign Up</h1>
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="auth-form__group">
+              <label className="auth-form__label" htmlFor="signup-name">
+                Full Name
               </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 size-5 opacity-40" />
+              <div className="auth-form__input-wrap">
+                <User className="auth-form__icon w-[18px] h-[18px]" />
                 <input
+                  id="signup-name"
                   type="text"
-                  className="input input-bordered w-full pl-10"
+                  className="auth-form__input"
                   placeholder="John Doe"
                   value={formData.fullName}
                   onChange={(e) =>
                     setFormData({ ...formData, fullName: e.target.value })
                   }
+                  autoComplete="name"
                 />
               </div>
             </div>
 
-            {/* EMAIL */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Email</span>
+            <div className="auth-form__group">
+              <label className="auth-form__label" htmlFor="signup-email">
+                Email
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-5 opacity-40" />
+              <div className="auth-form__input-wrap">
+                <Mail className="auth-form__icon w-[18px] h-[18px]" />
                 <input
+                  id="signup-email"
                   type="email"
-                  className="input input-bordered w-full pl-10"
+                  className="auth-form__input"
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
+                  autoComplete="email"
                 />
               </div>
             </div>
 
-            {/* PASSWORD */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Password</span>
+            <div className="auth-form__group">
+              <label className="auth-form__label" htmlFor="signup-password">
+                Password
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 opacity-40" />
+              <div className="auth-form__input-wrap">
+                {showPassword ? (
+                  <EyeOff className="auth-form__icon w-[18px] h-[18px]" />
+                ) : (
+                  <Eye className="auth-form__icon w-[18px] h-[18px]" />
+                )}
                 <input
+                  id="signup-password"
                   type={showPassword ? "text" : "password"}
-                  className="input input-bordered w-full pl-10 pr-10"
+                  className="auth-form__input auth-form__input--with-right-btn"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  className="auth-form__toggle-password"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    <EyeOff className="size-5 opacity-40" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                    <Eye className="size-5 opacity-40" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
               </div>
             </div>
 
-            {/* SUBMIT */}
             <button
               type="submit"
+              className="auth-form__submit"
               disabled={isSigningUp}
-              className="w-full h-11 rounded-lg font-medium flex items-center justify-center gap-2"
-              style={{
-                color: "#fff",
-              }}
             >
               {isSigningUp ? (
                 <>
-                  <Loader2 className="size-5 animate-spin" />
-                  Creating...
+                  <Loader2 className="inline w-5 h-5 animate-spin mr-2" />
+                  Creating account...
                 </>
               ) : (
                 "Create Account"
               )}
             </button>
-          </form>
 
-          <div className="text-center">
-            <p style={{ color: theme.textSecondary }}>
-              Already have an account? <Link to="/login">Sign in</Link>
+            <p className="auth-form__footer">
+              Already have an account? <Link to="/login">Login here</Link>
             </p>
-          </div>
+          </form>
         </div>
       </div>
-
-      {/* RIGHT SIDE */}
-      <AuthImagePattern
-        title="Join our community"
-        subtitle="Connect with friends, share moments, and stay in touch with your loved ones."
-      />
     </div>
   );
 };

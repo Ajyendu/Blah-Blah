@@ -39,35 +39,39 @@ export function formatRevealLabel(timestamp) {
   return `${time} on ${formattedDate}`;
 }
 
+export function formatDateTimeFull(timestamp) {
+  const date = new Date(timestamp);
+  return date.toLocaleString(undefined, {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 export function formatDuration(ms) {
   if (ms <= 0) return "Revealing now";
 
-  let totalSeconds = Math.floor(ms / 1000);
+  let total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  total %= 3600;
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
 
-  const days = Math.floor(totalSeconds / 86400);
-  totalSeconds %= 86400;
-
-  const hours = Math.floor(totalSeconds / 3600);
-  totalSeconds %= 3600;
-
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  const parts = [];
-
-  if (days) parts.push(`${days} day${days > 1 ? "s" : ""}`);
-  if (hours) parts.push(`${hours} hr`);
-  if (minutes) parts.push(`${minutes} min`);
-  if (seconds || parts.length === 0) parts.push(`${seconds} sec`);
-
-  return parts.join(" ");
+  const h = String(hours).padStart(2, "0");
+  const m = String(mins).padStart(2, "0");
+  const s = String(secs).padStart(2, "0");
+  return `${h}h ${m}m ${s}s`;
 }
 
 /* ================= ⏳ COUNTDOWN ================= */
 
 function TimedCountdown({ revealAt, onReveal }) {
   const [remaining, setRemaining] = useState(
-    Math.max(0, new Date(revealAt) - Date.now())
+    Math.max(0, new Date(revealAt) - Date.now()),
   );
 
   useEffect(() => {
@@ -83,13 +87,56 @@ function TimedCountdown({ revealAt, onReveal }) {
     }, 1000);
 
     return () => clearInterval(i);
-  }, [revealAt]);
+  }, [revealAt, onReveal]);
 
   if (remaining <= 0) return null;
 
+  const totalSeconds = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+
   return (
-    <div className="text-[10px] opacity-60 text-right">
-      ⏳ Reveals in {formatDuration(remaining)}
+    <div className="countdown-flip">
+      <div className="countdown-flip__title">SAVE THE DATE</div>
+      <div className="countdown-flip__row">
+        <div className="countdown-flip__segment">
+          <div className="countdown-flip__digits">
+            <span className="countdown-flip__digit">{pad(days)[0]}</span>
+            <span className="countdown-flip__digit">{pad(days)[1]}</span>
+          </div>
+          <div className="countdown-flip__label">Days</div>
+        </div>
+        <span className="countdown-flip__colon">:</span>
+        <div className="countdown-flip__segment">
+          <div className="countdown-flip__digits">
+            <span className="countdown-flip__digit">{pad(hours)[0]}</span>
+            <span className="countdown-flip__digit">{pad(hours)[1]}</span>
+          </div>
+          <div className="countdown-flip__label">Hours</div>
+        </div>
+        <span className="countdown-flip__colon">:</span>
+        <div className="countdown-flip__segment">
+          <div className="countdown-flip__digits">
+            <span className="countdown-flip__digit">{pad(minutes)[0]}</span>
+            <span className="countdown-flip__digit">{pad(minutes)[1]}</span>
+          </div>
+          <div className="countdown-flip__label">Minutes</div>
+        </div>
+        <span className="countdown-flip__colon">:</span>
+        <div className="countdown-flip__segment">
+          <div className="countdown-flip__digits">
+            <span className="countdown-flip__digit">{pad(secs)[0]}</span>
+            <span className="countdown-flip__digit">{pad(secs)[1]}</span>
+          </div>
+          <div className="countdown-flip__label">Seconds</div>
+        </div>
+      </div>
+      <div className="countdown-flip__datetime">
+        {formatDateTimeFull(revealAt)}
+      </div>
     </div>
   );
 }
@@ -158,6 +205,7 @@ function TimedMedia({ message }) {
 
 function MessageItem({ message, onReveal }) {
   const { authUser } = useAuthStore();
+  const [botTyping, setBotTyping] = useState(false);
 
   const isSender = message.senderId === authUser._id;
   const isTimed = message.revealAt && !message.revealed;
@@ -170,13 +218,14 @@ function MessageItem({ message, onReveal }) {
   }
   if (isTimed && message.revealAt && isSender) {
     return (
-      <div className="message-bubble">
-        {message.text}{" "}
+      <div className="message-bubble message-bubble--timed">
         <TimedTextMessage message={message} onReveal={onReveal} />
+        {message.text && (
+          <div className="timed-message-text">{message.text}</div>
+        )}
       </div>
     );
   }
-  const [botTyping, setBotTyping] = useState(false);
 
   // ✅ SENDER OR REVEALED
   return (
@@ -187,11 +236,35 @@ function MessageItem({ message, onReveal }) {
         }`}
       >
         <div>{message.text}</div>
+        {message.image &&
+          ((message.fileName &&
+            !/\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(
+              message.fileName,
+            )) ||
+          message.image.includes("/raw/") ? (
+            <a
+              href={message.image}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="msg-attachment-link msg-attachment-file"
+            >
+              📎 {message.fileName || "Download file"}
+            </a>
+          ) : (
+            <a
+              href={message.image}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="msg-attachment-link"
+            >
+              <img src={message.image} alt="" className="msg-attachment-img" />
+            </a>
+          ))}
       </div>
 
       {message.revealAt && message.revealed && (
         <div
-          className={`text-[10px] opacity-60 mt-1 text-red-500 ${
+          className={`text-[10px] opacity-60 mt-1 text-gray-500 ${
             isSender ? "text-right" : "text-left"
           }`}
         >

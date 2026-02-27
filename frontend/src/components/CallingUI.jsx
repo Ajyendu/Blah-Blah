@@ -1,8 +1,10 @@
+import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
+
 function CallingUI({ name, avatar, onCancel }) {
   return (
     <div style={overlay}>
       <div style={card}>
-        <img src={avatar || "/avatar.png"} style={avatarstyle} />
+        <img src={avatar || DEFAULT_AVATAR_URL} style={avatarstyle} />
         <h2 style={namestyle}>{name}</h2>
         <p style={subtitle}>Calling…</p>
 

@@ -1,0 +1,277 @@
+/* ========== Profile page ========== */
+.profile-page-shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+}
+
+.profile-content-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+  min-height: 0;
+}
+
+/* Card container */
+.profile-card {
+  width: 100%;
+  max-width: 680px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 3rem 3.5rem;
+}
+
+.profile-content {
+  display: flex;
+  align-items: center;
+  gap: 3.5rem;
+}
+
+/* Avatar */
+.profile-avatar-frame {
+  flex-shrink: 0;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.profile-avatar-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  z-index: 1;
+  transition: opacity 0.2s ease;
+}
+
+.profile-avatar-overlay-hint {
+  opacity: 0;
+}
+
+.profile-avatar-frame:hover .profile-avatar-overlay-hint {
+  opacity: 1;
+}
+
+.profile-avatar-overlay-text {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Details column */
+.profile-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.profile-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Name – fixed slot so display/input swap without moving email or User ID */
+.profile-name-field {
+  margin-bottom: 0.25rem;
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.profile-name-slot {
+  display: flex;
+  align-items: center;
+  min-height: 3.5rem;
+  width: 100%;
+  max-width: 400px;
+  margin-left: -0.5rem;
+}
+
+.profile-name-display {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #0f172a;
+  background: none;
+  border: none;
+  padding: 0.35rem 0.5rem;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s ease, color 0.15s ease;
+  letter-spacing: -0.02em;
+  height: 3.5rem;
+  box-sizing: border-box;
+}
+
+.profile-name-display:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.profile-name-hint {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #94a3b8;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.profile-name-display:hover .profile-name-hint {
+  opacity: 1;
+}
+
+.profile-name-input {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #0f172a;
+  border: none;
+  border-radius: 10px;
+  padding: 0.35rem 0.5rem;
+  margin: 0;
+  width: 100%;
+  min-width: 120px;
+  height: 3.5rem;
+  box-sizing: border-box;
+  transition: background 0.2s ease;
+  letter-spacing: -0.02em;
+  background: #f8fafc;
+}
+
+.profile-name-input:hover {
+  background: #f1f5f9;
+}
+
+.profile-name-input:focus {
+  outline: none;
+  background: #fff;
+}
+
+/* Email */
+.profile-email-field {
+  padding: 0.5rem 0;
+}
+
+.profile-email-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profile-email-label {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.profile-email {
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: #343a40;
+  letter-spacing: 0.01em;
+}
+
+/* ID Card */
+.profile-id-card {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f1f3f5;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  width: fit-content;
+  min-width: 220px;
+}
+
+.profile-id-card-label {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.profile-id-card-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-id-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  color: #000;
+  letter-spacing: 0.04em;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-copy-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+.profile-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.profile-copy-btn:hover {
+  background: var(--accent-dark);
+}
+
+.profile-copy-btn:active {
+  background: var(--accent-dark);
+}

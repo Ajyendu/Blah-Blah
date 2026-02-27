@@ -4,9 +4,11 @@ import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
+import FriendsPage from "./pages/FriendsPage";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { flushSync } from "react-dom";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import ThemeSync from "./components/ThemeSync";
@@ -23,6 +25,7 @@ const App = () => {
   const socket = useAuthStore((s) => s.socket);
   const [callType, setCallType] = useState(null);
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
+  const getMyChats = useChatStore((s) => s.getMyChats);
   const [calling, setCalling] = useState(false);
   const [activeCallUserAvatar, setActiveCallUserAvatar] = useState("");
   const [activeCallUserName, setActiveCallUserName] = useState("");
@@ -31,60 +34,59 @@ const App = () => {
   const [activeCallUserId, setActiveCallUserId] = useState(null);
 
   const cancelCall = () => {
-    console.log("🔕 Caller cancelled call");
-
     if (activeCallUserId) {
-      socket.emit("end-call", { to: activeCallUserId });
+      socket.emit("end-call", { to: String(activeCallUserId) });
     }
-
     setCalling(false);
     setCallActive(false);
     setActiveCallUserId(null);
     setActiveCallUserName("");
     setActiveCallUserAvatar("");
+    setCallType(null);
   };
 
   // ✅ Check auth on app load
   useEffect(() => {
-    console.log("CALL UI STATE", {
-      callActive,
-      activeCallUserId,
-      activeCallUserName,
-      activeCallUserAvatar,
-    });
-  }, [callActive]);
-
-  useEffect(() => {
     checkAuth();
   }, []);
 
-  // ✅ SINGLE SOURCE OF TRUTH FOR ENDING CALL UI
+  // ✅ Load all conversations (with last messages) as soon as user is authenticated and page is opened
   useEffect(() => {
-    if (!socket) return; // ✅ IMPORTANT
-    const onCallEnded = () => {
-      console.log("📴 call-ended → hiding controls");
-      setCallActive(false);
-      setCalling(false);
-      setActiveCallUserId(null);
-    };
+    if (authUser?._id) getMyChats();
+  }, [authUser?._id, getMyChats]);
 
-    socket.on("call-ended", onCallEnded);
-    return () => socket.off("call-ended", onCallEnded);
-  }, []);
+  const clearCallUIRef = useRef(null);
+  clearCallUIRef.current = () => {
+    setCallActive(false);
+    setCalling(false);
+    setActiveCallUserId(null);
+    setActiveCallUserName("");
+    setActiveCallUserAvatar("");
+    setCallType(null);
+  };
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("disconnect", () => {
-      console.log("❌ SOCKET DISCONNECTED");
-    });
-    socket.on("disconnect", (reason) => {
-      console.error("❌ SOCKET DISCONNECTED:", reason);
-    });
+    const onCallEnded = () => {
+      flushSync(() => {
+        if (clearCallUIRef.current) clearCallUIRef.current();
+      });
+    };
+    socket.on("call-ended", onCallEnded);
+    window.addEventListener("call-ended-local", onCallEnded);
 
+    return () => {
+      socket.off("call-ended", onCallEnded);
+      window.removeEventListener("call-ended-local", onCallEnded);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("disconnect", () => {});
     socket.on("connect_error", (err) => {
       console.error("❌ SOCKET CONNECT ERROR:", err.message);
     });
-
     socket.on("error", (err) => {
       console.error("❌ SOCKET ERROR:", err);
     });
@@ -92,9 +94,10 @@ const App = () => {
 
   // ✅ Caller-side activation (after answer)
   useEffect(() => {
-    const handler = () => {
+    const handler = (e) => {
       setCalling(false);
       setCallActive(true);
+      if (e.detail?.callType) setCallType(e.detail.callType);
     };
 
     window.addEventListener("call-accepted", handler);
@@ -174,10 +177,20 @@ const App = () => {
           path="/login"
           element={!authUser ? <LoginPage /> : <Navigate to="/" />}
         />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={authUser ? <SettingsPage /> : <Navigate to="/login" />} />
         <Route
           path="/profile"
           element={authUser ? <ProfilePage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/friends"
+          element={
+            authUser ? (
+              <FriendsPage />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
       </Routes>
 

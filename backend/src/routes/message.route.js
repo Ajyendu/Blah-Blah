@@ -19,7 +19,7 @@ router.post("/send-by-code", protectRoute, sendMessageByCode);
 router.get(
   "/conversation/:conversationId",
   protectRoute,
-  getMessagesByConversation
+  getMessagesByConversation,
 );
 
 export default router;

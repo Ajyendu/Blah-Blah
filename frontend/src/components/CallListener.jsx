@@ -3,6 +3,7 @@ import { useAudioCall } from "../store/useAudioCall";
 import IncomingCallModal from "./IncomingCallModal";
 import { ringtone } from "./utils/ringtone";
 import { useAuthStore } from "../store/useAuthStore";
+import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
 
 function CallListener({ setActiveCallUserId, setCallActive, setCallType }) {
   const socket = useAuthStore((s) => s.socket);
@@ -12,27 +13,26 @@ function CallListener({ setActiveCallUserId, setCallActive, setCallType }) {
   const [incoming, setIncoming] = useState(null);
 
   useEffect(() => {
-    if (!socket) return; // 🔥 IMPORTANT
-    // socket.connect();
+    if (!socket) return;
     socket.on("incoming-call", (data) => {
-      setCallType(data.callType); // ✅ THIS LINE
+      setCallType(data.callType);
       setActiveCallUserId(data.from);
       setIncoming(data);
     });
 
-    socket.on("call-ended", () => {
+    const handleCallEnded = () => {
       ringtone.pause();
       setCallActive(false);
       ringtone.currentTime = 0;
-      console.log("📴 call ended");
       setIncoming(null);
-    });
+    };
+    socket.on("call-ended", handleCallEnded);
 
     return () => {
       socket.off("incoming-call");
-      socket.off("call-ended");
+      socket.off("call-ended", handleCallEnded);
     };
-  }, []);
+  }, [socket, setCallType, setCallActive, setActiveCallUserId]);
 
   if (!incoming) return null;
 
@@ -41,19 +41,21 @@ function CallListener({ setActiveCallUserId, setCallActive, setCallType }) {
       <IncomingCallModal
         caller={{
           name: incoming.name ?? incoming.from,
-          avatar: incoming.avatar || "/avatar.png",
+          avatar: incoming.avatar || DEFAULT_AVATAR_URL,
           type: incoming.callType,
+          callType: incoming.callType,
         }}
         onAccept={async () => {
-          await answerCall(incoming);
-          setIncoming(null);
+          // Show call card + timer immediately; connect in background
           setCallActive(true);
           setActiveCallUserId(incoming.from);
           setActiveCallUserName(incoming.name);
           setActiveCallUserAvatar(incoming.avatar);
+          setIncoming(null);
+          await answerCall(incoming);
         }}
         onReject={() => {
-          socket.emit("end-call", { to: incoming.from });
+          socket.emit("end-call", { to: String(incoming.from) });
           setIncoming(null);
         }}
       />

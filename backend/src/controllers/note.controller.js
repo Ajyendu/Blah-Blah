@@ -53,6 +53,11 @@ export const toggleNote = async (req, res) => {
     if (!msg) {
       return res.status(404).json({ message: "Message not found" });
     }
+    if (msg.deleted) {
+      return res
+        .status(400)
+        .json({ message: "Cannot add note to deleted message" });
+    }
 
     let preview = "";
     if (msg.text?.trim()) preview = msg.text.slice(0, 120);
@@ -67,7 +72,10 @@ export const toggleNote = async (req, res) => {
       messageCreatedAt: msg.createdAt, // 🔥 IMPORTANT
     });
 
-    res.json({ saved: true, note });
+    const noteObj = note.toObject();
+    if (noteObj.messageSenderId)
+      noteObj.messageSenderId = noteObj.messageSenderId.toString();
+    res.json({ saved: true, note: noteObj });
   } catch (err) {
     console.error("toggleNote error:", err);
     res.status(500).json({ message: "Failed" });
@@ -80,9 +88,21 @@ export const getChatNotes = async (req, res) => {
     const userId = req.user._id;
     const { chatId } = req.params;
 
-    const notes = await ChatNote.find({ userId, chatId }).sort({
+    let notes = await ChatNote.find({ userId, chatId }).sort({
       createdAt: 1,
     });
+
+    notes = notes.map((n) => {
+      const o = n.toObject();
+      if (o.messageSenderId) o.messageSenderId = o.messageSenderId.toString();
+      return o;
+    });
+    for (const note of notes) {
+      if (!note.messageSenderId && note.messageId) {
+        const msg = await Message.findById(note.messageId).select("senderId");
+        if (msg) note.messageSenderId = msg.senderId.toString();
+      }
+    }
 
     res.json(notes);
   } catch (err) {

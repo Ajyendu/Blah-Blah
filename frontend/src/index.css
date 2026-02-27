@@ -5,6 +5,8 @@
 :root {
   --app-bg: #ffffff;
   --primary: #3b82f6;
+  --accent: #ec4899;
+  --accent-dark: #be185d;
   --msg-mine: #2563eb;
   --msg-other: #e5e7eb;
 }

@@ -3,6 +3,14 @@ import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useChatStore } from "./useChatStore.js";
+import { useNoteStore } from "./useNoteStore.js";
+import { useGameStore } from "./useGameStore.js";
+
+function closeAllPanels() {
+  useNoteStore.getState().setIsNotesOpen(false);
+  useGameStore.getState().setTruthDareOpen(false);
+  useChatStore.getState().clearSelectedChat();
+}
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -20,9 +28,8 @@ export const useAuthStore = create((set, get) => ({
       const token = localStorage.getItem("token");
 
       if (token) {
-        axiosInstance.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${token}`;
+        axiosInstance.defaults.headers.common["Authorization"] =
+          `Bearer ${token}`;
       }
 
       const res = await axiosInstance.get("/auth/check", {
@@ -30,6 +37,7 @@ export const useAuthStore = create((set, get) => ({
       });
 
       set({ authUser: res.data });
+      closeAllPanels();
       get().connectSocket();
     } catch (error) {
       console.log("Error in checkAuth:", error);
@@ -48,11 +56,11 @@ export const useAuthStore = create((set, get) => ({
       const { user, token } = res.data; // ✅ GET TOKEN
 
       localStorage.setItem("token", token);
-      axiosInstance.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${token}`;
+      axiosInstance.defaults.headers.common["Authorization"] =
+        `Bearer ${token}`;
 
       set({ authUser: user, token });
+      closeAllPanels();
       toast.success("Account created successfully");
 
       get().connectSocket();
@@ -72,11 +80,11 @@ export const useAuthStore = create((set, get) => ({
       const { user, token } = res.data; // ✅ GET TOKEN
 
       localStorage.setItem("token", token);
-      axiosInstance.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${token}`;
+      axiosInstance.defaults.headers.common["Authorization"] =
+        `Bearer ${token}`;
 
       set({ authUser: user, token });
+      closeAllPanels();
       toast.success("Logged in successfully");
 
       get().connectSocket();
@@ -113,6 +121,24 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // ================= DELETE ACCOUNT =================
+  deleteAccount: async () => {
+    try {
+      await axiosInstance.post("/auth/delete-account", {}, { withCredentials: true });
+      localStorage.removeItem("token");
+      delete axiosInstance.defaults.headers.common["Authorization"];
+      set({ authUser: null, token: null });
+      const socket = get().socket;
+      socket?.off();
+      socket?.disconnect();
+      get().disconnectSocket();
+      toast.success("Account deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete account");
+      throw err;
+    }
+  },
+
   // ================= UPDATE PROFILE =================
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
@@ -140,7 +166,9 @@ export const useAuthStore = create((set, get) => ({
 
     console.log("🔐 Connecting socket with token:", token);
 
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL || "").trim() || "http://localhost:5050";
+    const backendUrl =
+      (import.meta.env.VITE_BACKEND_URL || "").trim() ||
+      "http://localhost:5050";
     const socket = io(backendUrl, {
       auth: { token },
     });
@@ -159,7 +187,10 @@ export const useAuthStore = create((set, get) => ({
     });
 
     socket.on("getOnlineUsers", (userIds) => {
-      set({ onlineUsers: userIds });
+      const normalized = Array.isArray(userIds)
+        ? userIds.map((id) => String(id))
+        : [];
+      set({ onlineUsers: normalized });
     });
 
     set({ socket });

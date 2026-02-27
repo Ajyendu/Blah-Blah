@@ -17,15 +17,11 @@ const Navbar = () => {
               to="/"
               className="flex items-center gap-2.5 hover:opacity-80 transition-all"
             >
-              <div className="size-9 rounded-lg overflow-hidden">
-                <img
-                  src="/blah-blah.png"
-                  alt="Blah Blah Logo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <h1 className="text-lg font-bold">Blah Blah</h1>
+              <img
+                src="/logo.png"
+                alt="Blah Blah"
+                className="h-9 w-auto object-contain"
+              />
             </Link>
           </div>
 

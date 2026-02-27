@@ -31,7 +31,7 @@ app.use(
   cors({
     origin: true, // 🔥 allow any origin (DEV ONLY)
     credentials: true,
-  })
+  }),
 );
 
 /* ================= ROUTES ================= */

@@ -13,6 +13,7 @@ export default function BottleStage({ rotation, onSpin, isSpinning }) {
       rotate(${rotation}deg) scale(2)
       rotateX(${Math.sin(rotation * 0.02) * 3}deg)
     `,
+          transition: isSpinning ? "none" : "transform 0.45s ease-out",
           cursor: isSpinning ? "default" : "pointer",
         }}
         onClick={!isSpinning ? onSpin : undefined}
