@@ -18,11 +18,9 @@ const ColorPicker = ({ label, value, onChange, description }) => (
 
 const COLOR_ITEMS = [
   { key: "accent", label: "Accent" },
-  { key: "accentDark", label: "Accent dark" },
   { key: "appBg", label: "App bg" },
-  { key: "pageBg", label: "Page bg" },
+  { key: "panelBg", label: "Panel (header, input)" },
   { key: "darkBg", label: "Sidebar" },
-  { key: "chatBg", label: "Chat bg" },
   { key: "bubbleMine", label: "My bubble" },
   { key: "bubbleOther", label: "Other bubble" },
   { key: "textPrimary", label: "Text" },
@@ -44,10 +42,20 @@ const ThemeCustomizer = ({ variant = "sections", useDraft = false }) => {
     return (
       <div className="theme-cards-grid">
         {COLOR_ITEMS.map(({ key, label }) => {
-          const value = key === "darkBg" ? (source.darkBg != null ? source.darkBg : "#000000") : (source[key] ?? "");
+          const value =
+            key === "darkBg"
+              ? source.darkBg != null
+                ? source.darkBg
+                : "#000000"
+              : key === "panelBg"
+                ? (source.panelBg ?? "#ffffff")
+                : (source[key] ?? "");
           return (
             <label key={key} className="theme-color-card">
-              <span className="theme-color-card__swatch" style={{ background: value }} />
+              <span
+                className="theme-color-card__swatch"
+                style={{ background: value }}
+              />
               <input
                 type="color"
                 value={value}
@@ -74,22 +82,16 @@ const ThemeCustomizer = ({ variant = "sections", useDraft = false }) => {
           onChange={(v) => setValue("accent", v)}
         />
         <ColorPicker
-          label="Darker accent (hover/active)"
-          description="Used for active and hover states"
-          value={source.accentDark || source.accent}
-          onChange={(v) => setValue("accentDark", v)}
-        />
-        <ColorPicker
           label="Background"
           description="Main app and page background"
           value={source.appBg}
           onChange={(v) => setValue("appBg", v)}
         />
         <ColorPicker
-          label="Page background"
-          description="Outer page area"
-          value={source.pageBg}
-          onChange={(v) => setValue("pageBg", v)}
+          label="Panel (header, input)"
+          description="Header panel and text input panel"
+          value={source.panelBg ?? "#ffffff"}
+          onChange={(v) => setValue("panelBg", v)}
         />
         <ColorPicker
           label="Sidebar & card"
@@ -101,11 +103,6 @@ const ThemeCustomizer = ({ variant = "sections", useDraft = false }) => {
 
       <div className="theme-section">
         <h3 className="theme-section-title">Chat</h3>
-        <ColorPicker
-          label="Chat background"
-          value={source.chatBg}
-          onChange={(v) => setValue("chatBg", v)}
-        />
         <ColorPicker
           label="My bubble"
           value={source.bubbleMine}

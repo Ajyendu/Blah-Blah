@@ -22,6 +22,10 @@
   pointer-events: none;
 }
 
+.main-screen-preview__scale--interactive {
+  pointer-events: auto;
+}
+
 .main-screen-preview__shell {
   width: 100%;
   height: 100%;
@@ -42,4 +46,257 @@
 
 .main-screen-preview__content {
   background: var(--app-bg, #fff) !important;
+}
+
+/* Preview: narrower conversation panel, more space for chat */
+.main-screen-preview .chat-list-panel {
+  width: 200px;
+  min-width: 200px;
+}
+.main-screen-preview .chat-list-panel__new-chat-btn {
+  justify-content: center;
+}
+.main-screen-preview .flex-1.flex.flex-col.min-w-0:has(.chat-layout) {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Theme preview: use theme bubble colors in mock chat */
+.main-screen-preview .msg-bubble-ref--mine {
+  background: var(--bubble-mine, var(--accent)) !important;
+  color: #fff;
+}
+.main-screen-preview .msg-bubble-ref--theirs {
+  background: var(--bubble-other, #fdf2f8) !important;
+  color: var(--text-primary, #1e293b);
+}
+
+/* Chat area in preview: compact layout */
+.main-screen-preview__chat-header {
+  flex-shrink: 0;
+}
+.main-screen-preview__chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--chat-bg, #f8fafc);
+}
+
+.main-screen-preview__msg-seen {
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.main-screen-preview__input {
+  flex-shrink: 0;
+  padding: 8px 12px 12px;
+}
+
+.main-screen-preview__input .message-input-ref__bar {
+  padding: 6px 10px 6px 12px;
+}
+
+/* Friends preview: full-width panel */
+.main-screen-preview__friends {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* Profile preview: match real profile layout – black top, photo + card top-aligned, User ID lower in white */
+.main-screen-preview__profile {
+  overflow-y: auto;
+  padding: 0;
+  background: var(--app-bg, #fff);
+}
+.main-screen-preview__profile .profile-page-backdrop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding-top: 0;
+}
+.main-screen-preview__profile-inner {
+  padding: 0 1rem;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+  margin-top: -1.5rem;
+}
+.main-screen-preview__profile .profile-user-id {
+  margin-top: auto;
+  padding-top: 2rem;
+}
+.main-screen-preview__profile .profile-photo-wrap {
+  width: 180px;
+  height: 180px;
+}
+.main-screen-preview__profile .profile-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.main-screen-preview__profile .profile-section-card {
+  min-height: auto;
+  padding: 0.5rem 0.75rem;
+  border-radius: 14px;
+  margin-top: 5rem;
+  margin-left: -6rem;
+}
+.main-screen-preview__profile .profile-section-title {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.main-screen-preview__profile .profile-section-header {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+}
+.main-screen-preview__profile .profile-fields-grid {
+  gap: 0.4rem 0.6rem;
+}
+.main-screen-preview__profile .profile-field-value,
+.main-screen-preview__profile .profile-field-input {
+  padding: 0.35rem 0.5rem;
+  min-height: 1.75rem;
+  font-size: 0.75rem;
+}
+.main-screen-preview__profile .profile-field-label {
+  font-size: 0.575rem;
+}
+.main-screen-preview__profile .profile-edit-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+}
+.main-screen-preview__profile .profile-edit-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Edit/Settings preview – exact copy of settings panel */
+.main-screen-preview__settings {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--app-bg, #fff);
+}
+.main-screen-preview__settings-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  width: 200px;
+  max-width: 200px;
+  margin-left: auto;
+  margin-top: 3rem;
+}
+.main-screen-preview__settings-btn {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
+  padding: 0.3rem 0.3rem;
+  border: 1px solid transparent;
+  cursor: default;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+.main-screen-preview__settings-btn--reset {
+  color: var(--text-secondary, #64748b);
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+.main-screen-preview__settings-btn--cancel {
+  color: #b91c1c;
+  background: transparent;
+  border-color: transparent;
+}
+.main-screen-preview__settings-btn--save {
+  color: #fff;
+  background: #16a34a;
+  border-color: #16a34a;
+}
+.main-screen-preview__settings-colors {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(5, auto);
+  gap: 0.55rem;
+  flex: 1;
+  min-height: 0;
+  width: 200px;
+  max-width: 200px;
+  align-content: start;
+  margin-left: auto;
+  margin-top: 0;
+  margin-bottom: -3rem;
+}
+.main-screen-preview__settings-color-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  background: var(--app-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  min-height: 0;
+}
+.main-screen-preview__settings-swatch {
+  width: 100%;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.main-screen-preview__settings-color-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  text-align: center;
+  line-height: 1.15;
+}
+.main-screen-preview__settings-danger {
+  margin-top: -2.75rem;
+  transform: translateY(-2rem);
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  flex-shrink: 0;
+}
+.main-screen-preview__settings-danger-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+.main-screen-preview__settings-danger-desc {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.65rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+.main-screen-preview__settings-delete-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  background: #dc2626;
+  border: none;
+  border-radius: 6px;
+  cursor: default;
+  pointer-events: none;
 }

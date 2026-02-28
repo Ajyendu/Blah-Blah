@@ -150,7 +150,7 @@ const ChatContainer = ({
 
   /* ================= MOOD BACKGROUND ================= */
 
-  useMoodBackground(safeMessages, authUser._id);
+  useMoodBackground(safeMessages, authUser._id, selectedChat._id);
 
   /* ================= AUTO SCROLL ================= */
 

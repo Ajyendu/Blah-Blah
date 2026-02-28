@@ -163,6 +163,22 @@
   gap: 0.35rem;
 }
 
+.auth-form__row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.auth-form__row .auth-form__group {
+  flex: 1;
+  min-width: 0;
+}
+
+.auth-form__row .auth-form__group:first-child {
+  flex: 1;
+  min-width: 120px;
+}
+
 .auth-form__group--row {
   flex-direction: row;
   align-items: center;

@@ -2,7 +2,7 @@
 
 .message-input-ref {
   padding: 12px 20px 20px;
-  background: #fff;
+  background: var(--panel-bg, #fff);
   border-top: 1px solid #eef0f3;
   flex-shrink: 0;
 }

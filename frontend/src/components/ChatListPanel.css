@@ -4,7 +4,7 @@
   width: 280px;
   min-width: 280px;
   height: 100%;
-  background: #fff;
+  background: var(--panel-bg, #fff);
   border-right: 1px solid #eef0f3;
   display: flex;
   flex-direction: column;

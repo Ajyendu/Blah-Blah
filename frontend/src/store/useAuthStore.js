@@ -12,6 +12,36 @@ function closeAllPanels() {
   useChatStore.getState().clearSelectedChat();
 }
 
+/** Strip token from URL so shared links never log someone in. Call on every load. */
+function stripTokenFromUrl() {
+  if (typeof window === "undefined" || !window.history?.replaceState) return;
+  const url = new URL(window.location.href);
+  let changed = false;
+  for (const key of ["token", "access_token"]) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+  if (url.hash) {
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+    for (const key of ["token", "access_token"]) {
+      if (hashParams.has(key)) {
+        hashParams.delete(key);
+        changed = true;
+      }
+    }
+    const newHash = hashParams.toString() ? `#${hashParams.toString()}` : "";
+    if (url.hash !== newHash) {
+      url.hash = newHash;
+      changed = true;
+    }
+  }
+  if (changed) {
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }
+}
+
 export const useAuthStore = create((set, get) => ({
   authUser: null,
   token: localStorage.getItem("token"), // ✅ STORE TOKEN
@@ -24,6 +54,7 @@ export const useAuthStore = create((set, get) => ({
 
   // ================= CHECK AUTH =================
   checkAuth: async () => {
+    stripTokenFromUrl();
     try {
       const token = localStorage.getItem("token");
 
@@ -132,7 +163,11 @@ export const useAuthStore = create((set, get) => ({
   // ================= DELETE ACCOUNT =================
   deleteAccount: async () => {
     try {
-      await axiosInstance.post("/auth/delete-account", {}, { withCredentials: true });
+      await axiosInstance.post(
+        "/auth/delete-account",
+        {},
+        { withCredentials: true },
+      );
       localStorage.removeItem("token");
       delete axiosInstance.defaults.headers.common["Authorization"];
       set({ authUser: null, token: null });

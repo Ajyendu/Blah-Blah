@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Copy, Check, Share2 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { useAuthStore } from "../store/useAuthStore.js";
 import { DEFAULT_AVATAR_URL, getDefaultAvatarByGender } from "../lib/defaultAvatar.js";
@@ -21,6 +21,7 @@ const ProfilePage = () => {
   const [firstNameValue, setFirstNameValue] = useState("");
   const [lastNameValue, setLastNameValue] = useState("");
   const [genderValue, setGenderValue] = useState("male");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!editingName && authUser?.fullName != null) {
@@ -79,6 +80,49 @@ const ProfilePage = () => {
     [updateProfile],
   );
 
+  const handleCopyUserCode = useCallback(() => {
+    const code = authUser?.userCode;
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(
+      () => {
+        setCopied(true);
+        toast.success("User ID copied");
+        setTimeout(() => setCopied(false), 2000);
+      },
+      () => toast.error("Copy failed"),
+    );
+  }, [authUser?.userCode]);
+
+  const getShareText = useCallback(() => {
+    const code = authUser?.userCode;
+    if (!code) return "";
+    return `My Blah Blah User ID: ${code}\nAdd me on Blah Blah!`;
+  }, [authUser?.userCode]);
+
+  const handleShareUserCode = useCallback(async () => {
+    const code = authUser?.userCode;
+    if (!code) return;
+    const text = getShareText();
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "My Blah Blah User ID",
+          text,
+        });
+        toast.success("Share opened");
+      } catch (err) {
+        if (err?.name !== "AbortError") {
+          toast.error("Share failed");
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(text).then(
+        () => toast.success("Copied – paste in WhatsApp, SMS, etc. to share"),
+        () => toast.error("Copy failed"),
+      );
+    }
+  }, [authUser?.userCode, getShareText]);
+
   if (!authUser) {
     return (
       <div className="profile-page-shell app-shell h-screen w-screen flex">
@@ -100,7 +144,7 @@ const ProfilePage = () => {
   const rawAvatar =
     authUser.profilePic && authUser.profilePic.trim()
       ? authUser.profilePic
-      : getDefaultAvatarByGender(authUser.gender);
+      : getDefaultAvatarByGender(authUser.gender, authUser._id);
   // Use full URL for path-only avatars so they load reliably (e.g. /Boy1.jpeg)
   const displayAvatar =
     typeof rawAvatar === "string" && rawAvatar.startsWith("/")
@@ -260,6 +304,32 @@ const ProfilePage = () => {
           </div>
           </div>
           <div className="profile-content-wrap__spacer" aria-hidden />
+          {authUser?.userCode && (
+            <div className="profile-user-id">
+              <span className="profile-user-id__label">Your User ID</span>
+              <div className="profile-user-id__row">
+                <code className="profile-user-id__code">{authUser.userCode}</code>
+                <button
+                  type="button"
+                  onClick={handleShareUserCode}
+                  className="profile-user-id__share"
+                  aria-label="Share User ID"
+                  title="Share to WhatsApp, SMS, etc."
+                >
+                  <Share2 size={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyUserCode}
+                  className="profile-user-id__copy"
+                  aria-label="Copy User ID"
+                  title="Copy"
+                >
+                  {copied ? <Check size={20} /> : <Copy size={20} />}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

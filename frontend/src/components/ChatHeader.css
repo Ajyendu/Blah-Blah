@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px 10.5px 20px;
-  background: #fff;
+  background: var(--panel-bg, #fff);
   border-bottom: 1px solid #eef0f3;
   flex-shrink: 0;
 }
@@ -194,7 +194,8 @@
   color: #dc2626 !important;
 }
 
-.chat-header-ref__dropdown-btn--danger:hover .chat-header-ref__dropdown-icon--danger {
+.chat-header-ref__dropdown-btn--danger:hover
+  .chat-header-ref__dropdown-icon--danger {
   color: #b91c1c !important;
 }
 
@@ -239,7 +240,9 @@
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .chat-header-ref__confirm-btn--cancel {

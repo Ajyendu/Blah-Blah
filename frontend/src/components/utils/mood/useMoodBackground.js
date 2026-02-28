@@ -302,7 +302,9 @@ function blendEmotionColorsToRGB(mix) {
   };
 
   Object.entries(mix).forEach(([emotion, weight]) => {
-    let [h, s, l] = EMOTION_COLORS[emotion];
+    const base = EMOTION_COLORS[emotion];
+    if (!base) return;
+    let [h, s, l] = base;
     let [cr, cg, cb] = hslToRgb(h, s, l);
 
     /* 😡 ANGER — HARD SUPPRESSION */
@@ -343,6 +345,10 @@ function blendEmotionColorsToRGB(mix) {
       cb *= 1 + weights.happy * 0.15;
     }
 
+    cr = Math.min(255, Math.max(0, cr));
+    cg = Math.min(255, Math.max(0, cg));
+    cb = Math.min(255, Math.max(0, cb));
+
     r += cr * weight;
     g += cg * weight;
     b += cb * weight;
@@ -356,43 +362,55 @@ function blendEmotionColorsToRGB(mix) {
     b = b * (1 - damp) + 245 * damp;
   }
 
+  const maxC = Math.max(r, g, b, 1);
+  if (maxC > 255) {
+    r = (r / maxC) * 255;
+    g = (g / maxC) * 255;
+    b = (b / maxC) * 255;
+  }
+
   return {
-    r: Math.min(255, r),
-    g: Math.min(255, g),
-    b: Math.min(255, b),
+    r: Math.min(255, Math.round(r)),
+    g: Math.min(255, Math.round(g)),
+    b: Math.min(255, Math.round(b)),
   };
 }
 
 /* ================= EMOTIONAL INERTIA ================= */
 
-// persistent mood state (does NOT reset)
-const currentColor = { r: 245, g: 245, b: 245 };
+const DEFAULT_NEUTRAL = { r: 245, g: 245, b: 245 };
+const moodByChatId = {};
 
 function smoothStep(current, target, alpha) {
   return current + (target - current) * alpha;
 }
 
-function applyInertialMood(target, intensity) {
-  // 🔥 THIS controls how hard it is to change mood
-  const alpha = 0.05 + intensity * 0.12;
-  // sad → very slow, strong emotion → faster
+function applyInertialMood(target, intensity, chatId) {
+  const key = chatId ?? "_global";
+  if (!moodByChatId[key]) {
+    moodByChatId[key] = { ...DEFAULT_NEUTRAL };
+  }
+  const current = moodByChatId[key];
 
-  currentColor.r = smoothStep(currentColor.r, target.r, alpha);
-  currentColor.g = smoothStep(currentColor.g, target.g, alpha);
-  currentColor.b = smoothStep(currentColor.b, target.b, alpha);
+  const alpha = 0.06 + intensity * 0.14;
 
-  const value = `rgb(
-    ${Math.round(currentColor.r)},
-    ${Math.round(currentColor.g)},
-    ${Math.round(currentColor.b)}
-  )`;
+  current.r = smoothStep(current.r, target.r, alpha);
+  current.g = smoothStep(current.g, target.g, alpha);
+  current.b = smoothStep(current.b, target.b, alpha);
 
-  document.documentElement.style.setProperty("--chat-bg", value);
+  const value = `rgb(${Math.round(current.r)}, ${Math.round(current.g)}, ${Math.round(current.b)})`;
+  document.documentElement.style.setProperty("--chat-mood-bg", value);
+}
 
-  // const conversationId = useAuthStore.getState().activeConversationId;
-  // if (conversationId) {
-  //   socket.emit("update_mood_background", { conversationId, color: value });
-  // }
+function resetMoodToTheme(chatId) {
+  const key = chatId ?? "_global";
+  delete moodByChatId[key];
+  const themeBg = getComputedStyle(document.documentElement).getPropertyValue("--chat-bg").trim();
+  if (themeBg) {
+    document.documentElement.style.setProperty("--chat-mood-bg", themeBg);
+  } else {
+    document.documentElement.style.setProperty("--chat-mood-bg", "rgb(245, 245, 245)");
+  }
 }
 
 /* ================= MESSAGE WINDOW ================= */
@@ -400,15 +418,20 @@ function applyInertialMood(target, intensity) {
 function getRecentMessages(messages, myId) {
   const mine = [];
   const theirs = [];
+  const myIdStr = myId != null ? String(myId) : "";
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (!m.text) continue;
+    if (!m?.text || typeof m.text !== "string") continue;
 
-    if (m.senderId === myId && mine.length < 5) mine.push(m.text);
-    else if (m.senderId !== myId && theirs.length < 5) theirs.push(m.text);
+    const senderStr = m.senderId != null ? String(m.senderId) : "";
+    if (senderStr === myIdStr && mine.length < 8) {
+      mine.push(m.text);
+    } else if (senderStr !== myIdStr && theirs.length < 8) {
+      theirs.push(m.text);
+    }
 
-    if (mine.length === 5 && theirs.length === 5) break;
+    if (mine.length >= 8 && theirs.length >= 8) break;
   }
 
   return [...mine, ...theirs];
@@ -416,15 +439,26 @@ function getRecentMessages(messages, myId) {
 
 /* ================= HOOK ================= */
 
-export function useMoodBackground(messages, myId) {
+export function useMoodBackground(messages, myId, chatId) {
   useEffect(() => {
-    if (!messages?.length) return;
+    if (!Array.isArray(messages) || messages.length === 0 || myId == null) {
+      resetMoodToTheme(chatId);
+      return;
+    }
 
     const recent = getRecentMessages(messages, myId);
+    if (recent.length === 0) {
+      resetMoodToTheme(chatId);
+      return;
+    }
+
     const result = analyzeEmotionMix(recent);
-    if (!result) return;
+    if (!result) {
+      resetMoodToTheme(chatId);
+      return;
+    }
 
     const target = blendEmotionColorsToRGB(result.mix);
-    applyInertialMood(target, result.intensity);
-  }, [messages, myId]);
+    applyInertialMood(target, result.intensity, chatId);
+  }, [messages, myId, chatId]);
 }

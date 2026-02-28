@@ -11,10 +11,12 @@
   --msg-other: #e5e7eb;
 }
 .sidebar,
-.chat-header,
-.message-input,
 .context-menu {
   background-color: white;
+}
+.chat-header,
+.message-input {
+  background-color: var(--panel-bg, white);
 }
 
 .app-bg {

@@ -3,6 +3,8 @@ import { create } from "zustand";
 const DEFAULT_THEME = {
   pageBg: "#f4f4f5",
   appBg: "#ffffff",
+  /** Conversation panel, header panel, and text input panel (one colour for all three) */
+  panelBg: "#ffffff",
   primary: "#2563eb",
   secondary: "#e5e7eb",
   accent: "#ec4899",

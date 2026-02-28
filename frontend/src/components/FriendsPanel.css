@@ -3,7 +3,7 @@
 .friends-panel {
   width: 100%;
   height: 100%;
-  background: linear-gradient(165deg, var(--page-bg, #f8fafc) 0%, var(--chat-bg, #f1f5f9) 50%, var(--app-bg, #fff) 100%);
+  background: var(--app-bg, #f8fafc);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -24,7 +24,7 @@
 .friends-panel__search {
   margin: 0 0 1rem;
   padding: 0.85rem 1.1rem;
-  background: var(--app-bg, #fff);
+  background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   display: flex;
@@ -32,7 +32,9 @@
   gap: 0.75rem;
   flex-shrink: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .friends-panel__search:focus-within {
@@ -73,12 +75,17 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-secondary, #64748b);
-  background: var(--app-bg, #fff);
+  background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  transition:
+    color 0.2s,
+    background 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
 }
 
 .friends-panel__sort-btn:hover {
@@ -115,15 +122,21 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--app-bg, #fff);
+  background: #fff;
   border-radius: 16px;
   padding: 0.25rem 0.25rem 0.25rem 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.2s, transform 0.15s;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  transition:
+    box-shadow 0.2s,
+    transform 0.15s;
 }
 
 .friends-panel__item-wrap:hover {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
   transform: translateY(-1px);
 }
 
@@ -155,7 +168,7 @@
   height: 56px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--app-bg, #fff);
+  border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: block;
 }
@@ -168,7 +181,7 @@
   height: 14px;
   border-radius: 50%;
   background: #22c55e;
-  border: 2.5px solid var(--app-bg, #fff);
+  border: 2.5px solid #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
@@ -203,7 +216,12 @@
   border: 1px solid #fecaca;
   border-radius: 10px;
   cursor: pointer;
-  transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  transition:
+    color 0.2s,
+    background 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
 }
 
 .friends-panel__remove:hover {
@@ -224,7 +242,7 @@
   font-size: 0.9375rem;
   color: var(--text-secondary, #94a3b8);
   line-height: 1.6;
-  background: var(--app-bg, #fff);
+  background: #fff;
   border-radius: 16px;
   margin-top: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -245,17 +263,23 @@
 }
 
 @keyframes friends-fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .friends-confirm-modal {
-  background: var(--app-bg, #fff);
+  background: #fff;
   border-radius: 20px;
   padding: 1.75rem 1.5rem;
   max-width: 380px;
   width: 100%;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   animation: friends-modalIn 0.25s ease;
 }
 
@@ -300,7 +324,9 @@
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .friends-confirm-cancel:hover {
@@ -318,7 +344,9 @@
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
-  transition: box-shadow 0.2s, transform 0.15s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.15s;
 }
 
 .friends-confirm-remove:hover {

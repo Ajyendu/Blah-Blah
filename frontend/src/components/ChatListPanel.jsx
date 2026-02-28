@@ -124,7 +124,7 @@ const ChatListPanel = () => {
                     </span>
                   )}
                 </div>
-                {rowStatus && (
+                {rowStatus ? (
                   <p
                     className={`chat-list-panel__status ${
                       iAmCreator
@@ -134,7 +134,15 @@ const ChatListPanel = () => {
                   >
                     {rowStatus}
                   </p>
-                )}
+                ) : chat.lastMessage ? (
+                  <p className="chat-list-panel__preview">
+                    {chat.lastMessage.image
+                      ? "Photo"
+                      : chat.lastMessage.fileName
+                        ? chat.lastMessage.fileName
+                        : chat.lastMessage.text || "Message"}
+                  </p>
+                ) : null}
               </div>
             </button>
           );

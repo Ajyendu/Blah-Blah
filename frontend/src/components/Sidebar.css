@@ -112,7 +112,7 @@
 }
 
 .sidebar-ref__nav-item.active {
-  background: var(--accent-dark, #db2777);
+  background: var(--accent, #ec4899);
   color: #fff;
   font-weight: 500;
   border-radius: 0 10px 10px 0;

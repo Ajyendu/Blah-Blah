@@ -7,8 +7,6 @@ import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
 import { useAudioCall } from "../store/useAudioCall";
 import { useRef } from "react";
-import { useMoodBackground } from "../components/utils/mood/useMoodBackground";
-// import ScreenSharePanel from "../components/utils/mood/ScreenSharePanel/ScreenSharePanel";
 import "./Homepage.css";
 import ChatNotes from "../components/ChatNotes";
 import TruthDarePanel from "../components/TruthDarePanel";
@@ -17,7 +15,6 @@ import { useNoteStore } from "../store/useNoteStore";
 import { useGameStore } from "../store/useGameStore";
 
 const HomePage = ({
-  messages,
   setActiveCallUserAvatar,
   setActiveCallUserId,
   setActiveCallUserName,
@@ -34,8 +31,6 @@ const HomePage = ({
   const theme = useThemeStore((s) => s.theme);
 
   const messagesRef = useRef(null);
-
-  useMoodBackground(messages, authUser._id);
 
   return (
     // <div className="chat-container h-screen w-screen flex">

@@ -16,7 +16,8 @@ import toast from "react-hot-toast";
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     gender: "male",
@@ -25,7 +26,7 @@ const SignUpPage = () => {
   const { signup, isSigningUp } = useAuthStore();
 
   const validateForm = () => {
-    if (!formData.fullName.trim()) return toast.error("Full name is required");
+    if (!formData.firstName.trim()) return toast.error("First name is required");
     if (!formData.email.trim()) return toast.error("Email is required");
     if (!/\S+@\S+\.\S+/.test(formData.email))
       return toast.error("Invalid email format");
@@ -38,8 +39,10 @@ const SignUpPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    const fullName = [formData.firstName.trim(), formData.lastName.trim()].filter(Boolean).join(" ").trim();
+    if (!fullName) return toast.error("First name is required");
     const profilePic = getRandomAvatarByGender(formData.gender);
-    signup({ ...formData, profilePic });
+    signup({ fullName, email: formData.email, password: formData.password, gender: formData.gender, profilePic });
   };
 
   return (
@@ -54,23 +57,45 @@ const SignUpPage = () => {
           <h1 className="auth-card__title">Sign Up</h1>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <div className="auth-form__group">
-              <label className="auth-form__label" htmlFor="signup-name">
-                Full Name
-              </label>
-              <div className="auth-form__input-wrap">
-                <User className="auth-form__icon w-[18px] h-[18px]" />
-                <input
-                  id="signup-name"
-                  type="text"
-                  className="auth-form__input"
-                  placeholder="John Doe"
-                  value={formData.fullName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fullName: e.target.value })
-                  }
-                  autoComplete="name"
-                />
+            <div className="auth-form__row">
+              <div className="auth-form__group">
+                <label className="auth-form__label" htmlFor="signup-first-name">
+                  First Name
+                </label>
+                <div className="auth-form__input-wrap">
+                  <User className="auth-form__icon w-[18px] h-[18px]" />
+                  <input
+                    id="signup-first-name"
+                    type="text"
+                    className="auth-form__input"
+                    placeholder="John"
+                    value={formData.firstName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, firstName: e.target.value })
+                    }
+                    autoComplete="given-name"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-form__group">
+                <label className="auth-form__label" htmlFor="signup-last-name">
+                  Last Name
+                </label>
+                <div className="auth-form__input-wrap">
+                  <User className="auth-form__icon w-[18px] h-[18px]" />
+                  <input
+                    id="signup-last-name"
+                    type="text"
+                    className="auth-form__input"
+                    placeholder="Doe"
+                    value={formData.lastName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, lastName: e.target.value })
+                    }
+                    autoComplete="family-name"
+                  />
+                </div>
               </div>
             </div>
 
