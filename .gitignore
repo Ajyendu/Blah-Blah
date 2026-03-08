@@ -3,3 +3,4 @@ backend/uploads/
 frontend/.env
 frontend/src/lib/.env
 *.dmg
+*.dmg
