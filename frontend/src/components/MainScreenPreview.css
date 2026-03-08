@@ -11,7 +11,9 @@
 
 .main-screen-preview--no-top-radius {
   border-radius: 0 0 12px 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .main-screen-preview__scale {
@@ -104,9 +106,121 @@
 /* Friends preview: full-width panel */
 .main-screen-preview__friends {
   flex: 1;
-  min-width: 0;
+  min-width: 320px;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 1rem;
+}
+
+.main-screen-preview__friends .friends-panel__card-avatar-wrap {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.main-screen-preview__friends .friends-panel__card-avatar {
+  width: 64px;
+  height: 64px;
+}
+
+.main-screen-preview__friends .friends-panel__card-name {
+  font-size: 0.7rem;
+}
+
+/* Friends panel: larger elements in mobile preview */
+.main-screen-preview--mobile .main-screen-preview__friends {
+  padding: 2.75rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__tabs {
+  padding: 2.5rem 0 2.75rem;
+}
+
+.main-screen-preview--mobile .main-screen-preview__friends .friends-panel__tab {
+  padding: 1.35rem 2.75rem;
+  font-size: 2rem;
+  border-bottom-width: 5px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__search {
+  padding: 2.2rem 2.75rem;
+  margin-bottom: 2.75rem;
+  border-radius: 26px;
+  gap: 1.35rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__search-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__search-input {
+  font-size: 2rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__sort {
+  padding-bottom: 2.2rem;
+  gap: 1.2rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__sort-btn {
+  padding: 1.2rem 2.2rem;
+  font-size: 1.6rem;
+  border-radius: 24px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__grid {
+  gap: 2.9rem;
+  padding: 0.4rem 2.25rem 0;
+  grid-template-columns: repeat(2, 320px);
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__card {
+  width: 320px;
+  height: 320px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__card-avatar-wrap {
+  width: 116px;
+  height: 116px;
+  margin-bottom: 0.35rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__card-avatar {
+  width: 116px;
+  height: 116px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__card-name {
+  font-size: 1.75rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__friends
+  .friends-panel__card-btn {
+  padding: 0.6rem 0.5rem;
 }
 
 /* Profile preview: match real profile layout – black top, photo + card top-aligned, User ID lower in white */
@@ -179,124 +293,632 @@
   height: 12px;
 }
 
-/* Edit/Settings preview – exact copy of settings panel */
+/* Profile preview: mobile layout – black top, large centered photo, card, User ID below */
+.main-screen-preview--mobile .main-screen-preview__profile {
+  background: #000;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-content-wrap__spacer:first-child {
+  flex: 0;
+  min-height: 0;
+  height: 0;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-page-backdrop {
+  flex: 0 0 auto;
+  padding: 1.5rem 1rem 1rem;
+  width: 100%;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-page-backdrop__fill {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: #000;
+  border-radius: 0;
+}
+
+.main-screen-preview--mobile .main-screen-preview__profile-inner {
+  flex-direction: column;
+  margin-top: 0;
+  padding: 0 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-photo-panel {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.main-screen-preview--mobile .main-screen-preview__profile .profile-photo-wrap {
+  width: 320px;
+  height: 320px;
+  flex-shrink: 0;
+}
+
+.main-screen-preview--mobile .main-screen-preview__profile .profile-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-cards-panel {
+  min-height: 0;
+  gap: 0;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-section-card {
+  margin: 0;
+  padding: 3.25rem 3.5rem;
+  border-radius: 36px;
+  background: var(--panel-bg, #1e293b);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-section-header {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.75rem;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-section-title {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+}
+
+.main-screen-preview--mobile .main-screen-preview__profile .profile-edit-btn {
+  padding: 1.1rem 2rem;
+  font-size: 1.45rem;
+  border-radius: 20px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-edit-btn
+  svg {
+  width: 26px;
+  height: 26px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-fields-grid {
+  grid-template-columns: 1fr;
+  gap: 1.75rem 0;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-field-label {
+  font-size: 1.15rem;
+  color: var(--text-secondary, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.main-screen-preview--mobile .main-screen-preview__profile .profile-field-value,
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-field-input {
+  padding: 1.1rem 1.6rem;
+  min-height: 4.25rem;
+  font-size: 1.55rem;
+  color: var(--text-primary, #fff);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-field-value--readonly {
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-secondary, #94a3b8);
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-content-wrap__spacer:last-of-type {
+  flex: 0;
+  min-height: 0;
+  height: 0;
+}
+
+.main-screen-preview--mobile .main-screen-preview__profile .profile-user-id {
+  margin-top: 0;
+  padding: 1.25rem 1.5rem 1.5rem;
+  text-align: left;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-user-id__label {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+  padding-left: 6rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-user-id__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-user-id__code {
+  font-size: 3.85rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.08em;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-user-id__share,
+.main-screen-preview--mobile
+  .main-screen-preview__profile
+  .profile-user-id__copy {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Edit/Settings preview – same structure & ratios as real Settings, scaled up and centered */
 .main-screen-preview__settings {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
-  padding: 1rem 1.25rem;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--app-bg, #fff);
+}
+
+/* Wrapper: show full scaled content, scroll if needed */
+.main-screen-preview__settings-scale-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-height: 540px;
+  max-height: none;
+  overflow: visible;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.main-screen-preview__settings-scale {
+  transform: scale(0.65);
+  transform-origin: center center;
+  flex-shrink: 0;
+}
+
+/* Match real layout: preview block (left), buttons + colour pickers combined on the right */
+.main-screen-preview__settings .settings-appearance-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 1.5rem;
+  flex-wrap: nowrap;
+}
+
+.main-screen-preview__settings .settings-preview-block {
+  width: 704px;
+  min-width: 704px;
+  flex-shrink: 0;
+  background: var(--app-bg, #fff);
+  order: 0;
+}
+
+.main-screen-preview__settings .settings-colors-cards {
+  flex: 0 0 auto;
+  width: 260px;
+  min-width: 260px;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  background: var(--app-bg, #fff);
-}
-.main-screen-preview__settings-actions {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.4rem;
-  flex-shrink: 0;
-  width: 200px;
-  max-width: 200px;
-  margin-left: auto;
-  margin-top: 3rem;
-}
-.main-screen-preview__settings-btn {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.4rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border-radius: 6px;
-  padding: 0.3rem 0.3rem;
-  border: 1px solid transparent;
-  cursor: default;
   pointer-events: none;
-  text-align: center;
-  white-space: nowrap;
+  order: 1;
+  overflow: visible;
 }
-.main-screen-preview__settings-btn--reset {
-  color: var(--text-secondary, #64748b);
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.12);
+
+/* Laptop preview: wider delete panel only; buttons and colour pickers stay 260px */
+.main-screen-preview__settings .settings-danger-zone {
+  min-width: 930px;
+  width: 930px;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-left: -700px;
 }
-.main-screen-preview__settings-btn--cancel {
-  color: #b91c1c;
-  background: transparent;
-  border-color: transparent;
+
+.main-screen-preview__settings .settings-action-btn,
+.main-screen-preview__settings .settings-delete-btn {
+  pointer-events: none;
+  cursor: default;
 }
-.main-screen-preview__settings-btn--save {
-  color: #fff;
-  background: #16a34a;
-  border-color: #16a34a;
+
+.main-screen-preview__settings .theme-color-card {
+  cursor: default;
 }
-.main-screen-preview__settings-colors {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(5, auto);
-  gap: 0.55rem;
+
+/* Edit tab in mobile preview: chat list left + buttons/colours/danger right, like real Settings */
+.main-screen-preview--mobile .main-screen-preview__settings {
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.main-screen-preview--mobile .main-screen-preview__settings-scale-wrap {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.main-screen-preview--mobile .main-screen-preview__settings-scale {
+  transform: none;
+  margin: 0;
   flex: 1;
   min-height: 0;
-  width: 200px;
-  max-width: 200px;
-  align-content: start;
-  margin-left: auto;
-  margin-top: 0;
-  margin-bottom: -3rem;
+  display: flex;
+  flex-direction: column;
 }
-.main-screen-preview__settings-color-card {
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-appearance-block {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-appearance-row {
+  flex: 1;
+  min-height: 0;
+  flex-direction: row;
+  gap: 0;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-preview-block {
+  display: none;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-colors-cards {
+  width: auto;
+  min-width: 0;
+  flex: 0 0 auto;
+  margin-left: auto;
+  margin-right: 20rem;
+  margin-top: 14rem;
+  padding: 1.05rem 0.79rem;
+  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-theme-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.8rem;
+  margin-bottom: 1.26rem;
+  margin-left: 3.5rem;
+  flex-shrink: 0;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-action-btn {
+  flex: 1;
+  min-width: 4.8rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 0.15rem 0.25rem;
+  min-height: 50px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-action-btn--reset {
+  color: #e5e7eb;
+  background: #4b5563;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-action-btn--cancel {
+  color: #dc2626;
+  background: #fff;
+  border-color: rgba(220, 38, 38, 0.6);
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-action-btn--save {
+  color: #fff;
+  background: var(--accent, #ec4899);
+  border-color: var(--accent, #ec4899);
+}
+
+.main-screen-preview--mobile .main-screen-preview__settings .theme-cards-grid {
+  display: grid;
+  grid-template-columns: 6rem 6rem;
+  row-gap: 0.25rem;
+  column-gap: 2.25rem;
+  grid-auto-rows: min-content;
+  align-content: start;
+  flex: 0 0 auto;
+  align-self: start;
+  margin-left: 3.5rem;
+}
+
+.main-screen-preview--mobile .main-screen-preview__settings .theme-color-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0.35rem;
-  background: var(--app-bg, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  min-height: 0;
+  gap: 0.63rem;
+  padding: 0.84rem 0.68rem 0.2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  width: 8rem;
+  min-width: 8rem;
+  max-width: 8rem;
+  box-sizing: border-box;
+  align-self: start;
 }
-.main-screen-preview__settings-swatch {
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .theme-color-card__swatch {
   width: 100%;
-  height: 32px;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-.main-screen-preview__settings-color-label {
-  font-size: 0.625rem;
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  text-align: center;
-  line-height: 1.15;
-}
-.main-screen-preview__settings-danger {
-  margin-top: -2.75rem;
-  transform: translateY(-2rem);
-  padding: 0.6rem 0.75rem;
-  border: 1px solid #fecaca;
+  height: 4rem;
+  min-height: 4rem;
   border-radius: 10px;
-  background: #fef2f2;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .theme-color-card__label {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #e5e7eb;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-danger-zone {
+  flex-shrink: 0;
+  padding: 2.5rem 2.5rem;
+  margin-top: 1.75rem;
+  margin-left: -24rem;
+  min-width: 44rem;
+  width: 100%;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-danger-zone
+  h3 {
+  font-size: 2.45rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-danger-zone
+  p {
+  font-size: 1.7rem;
+  margin-bottom: 1.45rem;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__settings
+  .settings-delete-btn {
+  padding: 1.45rem 2rem;
+  font-size: 1.7rem;
+}
+
+/* ================= MOBILE PREVIEW (when Settings is in mobile viewport) ================= */
+.main-screen-preview--mobile .main-screen-preview__shell {
+  padding: 0;
+}
+
+.main-screen-preview--mobile .main-screen-preview__card--mobile {
+  flex-direction: column;
+  margin: 0;
+  border-radius: 0;
+  min-height: 100%;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__card--mobile
+  .app-card__main {
+  order: 1;
+  flex: 1;
+  min-height: 0;
+  border-radius: 0;
+}
+
+.main-screen-preview--mobile
+  .main-screen-preview__card--mobile
+  .app-card__sidebar {
+  order: 2;
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.main-screen-preview--mobile .chat-list-panel-wrap {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.main-screen-preview--mobile .chat-list-panel {
+  width: 62.5% !important; /* 100/1.6 so scaled content fits without cropping */
+  min-width: 0 !important;
+  border-right: none;
+  transform: scale(1.6);
+  transform-origin: top left;
+}
+
+/* Larger elements inside preview (search, new chat, list, bottom bar) */
+.main-screen-preview--mobile .chat-list-panel__search {
+  margin: 22px;
+  padding: 16px 22px;
+  border-radius: 16px;
+}
+
+.main-screen-preview--mobile .chat-list-panel__search-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.main-screen-preview--mobile .chat-list-panel__search-input {
+  font-size: 20px;
+}
+
+.main-screen-preview--mobile .chat-list-panel__new-chat {
+  padding: 0 22px 18px;
+}
+
+.main-screen-preview--mobile .chat-list-panel__new-chat-btn {
+  padding: 18px 24px;
+  font-size: 20px;
+  border-radius: 16px;
+  gap: 14px;
+}
+
+.main-screen-preview--mobile .chat-list-panel__list {
+  padding: 10px 18px;
+}
+
+.main-screen-preview--mobile .chat-list-panel__item {
+  padding: 16px 22px;
+  gap: 18px;
+  border-radius: 18px;
+}
+
+.main-screen-preview--mobile .chat-list-panel__avatar-wrap {
+  width: 68px;
+  height: 68px;
   flex-shrink: 0;
 }
-.main-screen-preview__settings-danger-title {
-  margin: 0 0 0.25rem 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #b91c1c;
+
+.main-screen-preview--mobile .chat-list-panel__avatar {
+  width: 68px;
+  height: 68px;
 }
-.main-screen-preview__settings-danger-desc {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.65rem;
-  color: #64748b;
-  line-height: 1.35;
+
+.main-screen-preview--mobile .chat-list-panel__name {
+  font-size: 21px;
 }
-.main-screen-preview__settings-delete-btn {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #fff;
-  background: #dc2626;
-  border: none;
-  border-radius: 6px;
-  cursor: default;
-  pointer-events: none;
+
+.main-screen-preview--mobile .chat-list-panel__preview,
+.main-screen-preview--mobile .chat-list-panel__time {
+  font-size: 17px;
+}
+
+.main-screen-preview--mobile .sidebar-ref--mobile .sidebar-ref__nav-item {
+  padding: 30px 22px !important;
+}
+
+.main-screen-preview--mobile .sidebar-ref--mobile .sidebar-ref__nav-item svg {
+  width: 58px;
+  height: 58px;
+}
+
+.main-screen-preview--mobile .sidebar-ref--mobile .sidebar-ref__nav-label {
+  font-size: 22px !important;
+}
+
+.main-screen-preview--mobile .sidebar-ref--mobile .sidebar-ref__bottom-item {
+  padding: 30px 22px !important;
+}
+
+.main-screen-preview--mobile
+  .sidebar-ref--mobile
+  .sidebar-ref__bottom-item
+  svg {
+  width: 58px;
+  height: 58px;
+}
+
+.main-screen-preview--mobile
+  .sidebar-ref--mobile
+  .sidebar-ref__bottom-item
+  span {
+  font-size: 22px !important;
 }

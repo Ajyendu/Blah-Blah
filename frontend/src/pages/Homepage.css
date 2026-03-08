@@ -12,22 +12,69 @@
   border-radius: 30px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   overflow: hidden;
+  --content-corner-radius: 30px;
 }
 
-/* Combined block: chat list + main chat */
+/* Wrapper so chat list can be full width on mobile */
+.chat-list-panel-wrap {
+  display: flex;
+  min-width: 0;
+}
+
+/* Combined block: chat list + main chat (relative for bottom sheet positioning) */
 .app-content-wrap {
+  position: relative;
+  --content-corner-radius: 30px;
   border-top-left-radius: 30px;
   border-top-right-radius: 30px;
   border-bottom-right-radius: 30px;
   border-bottom-left-radius: 30px;
-  overflow: hidden;
+  overflow: visible;
   background: var(--app-bg, #fff);
-  border: 5px solid var(--dark-bg, #000);
+  border: 5px solid var(--content-border, #000);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   box-sizing: border-box;
+  /* Bottom sheet sits above the message input bar; extra gap so title bar is fully visible */
+  --chat-input-bar-height: 100px;
+  /* Extra gap between bottom sheet (Games, Notes, Watch Together, Drawing) and chat input */
+  --panel-chat-gap: 4px;
+}
+
+/* Main content area uses theme app bg (white in bright mode, dark in dark mode) */
+.app-card .app-content-wrap.app-card__main {
+  background: var(--app-bg, #fff);
+  box-shadow: none;
+}
+
+/* Laptop/desktop: larger corner radius when a chat is opened */
+@media (min-width: 769px) {
+  .app-content-wrap.app-content-wrap--chat-open {
+    --content-corner-radius: 30px;
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+    border-bottom-right-radius: 30px;
+    border-bottom-left-radius: 30px;
+  }
+
+  /* Chat column: same corner radius on all four corners (match header & input bar) */
+  .app-content-wrap.app-content-wrap--chat-open .chat-main-wrap {
+    border-top-left-radius: var(--content-corner-radius, 30px);
+    border-top-right-radius: var(--content-corner-radius, 30px);
+    border-bottom-left-radius: var(--content-corner-radius, 30px);
+    border-bottom-right-radius: var(--content-corner-radius, 30px);
+  }
 }
 
 /* ================= CHAT LAYOUT ================= */
+
+/* When panel is minimized on mobile: last message just above the panel title bar, 2px gap */
+.app-content-wrap.bottom-sheet-peek-visible .chat-container-ref {
+  padding-bottom: calc(48px + 2px); /* title bar height + minimal gap */
+}
+
+.chat-container-ref {
+  transition: padding-bottom 0.35s ease;
+}
 
 .chat-layout {
   display: flex;
@@ -69,6 +116,86 @@
 }
 .chat-layout {
   transition: all 0.25s ease;
+}
+
+/* Desktop only: panel (Notes, Drawing, Watch, Games) as side column; never affects mobile sliding sheet */
+@media (min-width: 769px) {
+  .desktop-panel-wrap {
+    flex-shrink: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-left: var(--panel-chat-gap, 4px);
+    margin-top: -4px;
+    margin-bottom: -4px;
+    margin-right: -4px;
+    background: var(--dark-bg, #000);
+    padding: 5px 5px 5px 0;
+    border-radius: 0 var(--content-corner-radius, 30px) var(--content-corner-radius, 30px) 0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
+  }
+
+  .desktop-panel-wrap > * {
+    background: var(--panel-bg, #fff);
+    border-radius: 0 calc(var(--content-corner-radius, 30px) - 5px) calc(var(--content-corner-radius, 30px) - 5px) 0;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
+/* ================= MOBILE (max-width: 768px) ================= */
+@media (max-width: 768px) {
+  .app-shell {
+    padding: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .app-shell .app-card {
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .app-card__sidebar {
+    order: 2;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-card__main {
+    order: 1;
+    flex: 1;
+    min-height: 0;
+    border-radius: 0;
+    border: none;
+  }
+
+  .chat-main-wrap {
+    min-width: 0;
+    min-height: 0; /* allow chat scroll area to get height and scroll when panel hidden */
+  }
+
+  /* When only list is shown (no chat selected), list panel full width */
+  .chat-list-panel-wrap {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Reserve space above fixed bottom bar for all app-card content */
+  .app-shell .app-card .app-content-wrap {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Message input bar height for bottom sheet offset + gap so title bar stays visible above input */
+  .app-content-wrap {
+    --chat-input-bar-height: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
 }
 .flash {
   animation: pulse 1.5s ease;

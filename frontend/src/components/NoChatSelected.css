@@ -9,6 +9,10 @@
   background: transparent;
 }
 
+.no-chat-ref--dark {
+  background-color: var(--chat-bg, #0a0a0a);
+}
+
 .no-chat-ref__illus {
   width: 95%;
   height: 95%;

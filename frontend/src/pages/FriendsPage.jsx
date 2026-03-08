@@ -1,24 +1,39 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Calendar, ArrowDownAZ, UserMinus } from "lucide-react";
+import { Search, MessageCircle, UserMinus, Phone, Video } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useAudioCall } from "../store/useAudioCall";
 import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
 import "../components/FriendsPanel.css";
 import "./Homepage.css";
 
-const FriendsPage = () => {
+const TABS = [
+  { id: "list", label: "List" },
+  { id: "requests", label: "Requests" },
+];
+
+const FriendsPage = ({
+  setCallType,
+  setCalling,
+  setActiveCallUserId,
+  setActiveCallUserName,
+  setActiveCallUserAvatar,
+}) => {
   const navigate = useNavigate();
+  const { startCall } = useAudioCall();
   const {
     getMyChats,
     getMyFriends,
     friendsChats,
+    chats,
     setSelectedChat,
     ensureChatInList,
     removeFriend,
   } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
+  const [activeTab, setActiveTab] = useState("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmRemove, setConfirmRemove] = useState(null); // { chat, userName }
   const [sortBy, setSortBy] = useState("date"); // "date" | "alphabet"
@@ -30,7 +45,7 @@ const FriendsPage = () => {
     }
   }, [authUser?._id, getMyChats, getMyFriends]);
 
-  // Friends = other participants from accepted chats (from friends API — not filtered by message count)
+  // Friends = other participants from accepted chats
   const friends = (friendsChats || []).reduce((acc, chat) => {
     if (!chat?.acceptedBy) return acc;
     const participants = Array.isArray(chat.participants)
@@ -49,6 +64,18 @@ const FriendsPage = () => {
     }
     return acc;
   }, []);
+
+  // Pending requests = chats not yet accepted (for current user as receiver)
+  const pendingRequests = useMemo(() => {
+    const list = (chats || []).filter((c) => !c?.acceptedBy);
+    return list.map((chat) => {
+      const participants = Array.isArray(chat.participants) ? chat.participants : [];
+      const other = participants.find(
+        (p) => p && String(p._id ?? p) !== String(authUser?._id),
+      );
+      return { user: other, chat };
+    }).filter((r) => r.user);
+  }, [chats, authUser?._id]);
 
   const filteredFriends = friends.filter(({ user: u }) => {
     if (!u) return false;
@@ -87,6 +114,9 @@ const FriendsPage = () => {
     return list;
   }, [filteredFriends, sortBy]);
 
+  const displayList = activeTab === "requests" ? pendingRequests : sortedFriends;
+  const showSearchInList = activeTab === "list";
+
   const handleFriendClick = (user, chat) => {
     if (!user || !authUser?._id) return;
     if (chat) {
@@ -94,6 +124,33 @@ const FriendsPage = () => {
       ensureChatInList(chat);
     }
     navigate("/");
+  };
+
+  const handleCall = (e, user) => {
+    e.stopPropagation();
+    if (!user?._id) return;
+    setActiveCallUserId(user._id);
+    setActiveCallUserName(user.fullName ?? user.username ?? "");
+    setActiveCallUserAvatar(user.profilePic || DEFAULT_AVATAR_URL);
+    setCallType("audio");
+    setCalling(true);
+    startCall(user._id, "audio");
+  };
+
+  const handleVideoCall = (e, user) => {
+    e.stopPropagation();
+    if (!user?._id) return;
+    setActiveCallUserId(user._id);
+    setActiveCallUserName(user.fullName ?? user.username ?? "");
+    setActiveCallUserAvatar(user.profilePic || DEFAULT_AVATAR_URL);
+    setCallType("video");
+    setCalling(true);
+    startCall(user._id, "video");
+  };
+
+  const handleMessage = (e, user, chat) => {
+    e.stopPropagation();
+    handleFriendClick(user, chat);
   };
 
   const handleRemoveFriend = (e, chat, userName) => {
@@ -125,86 +182,125 @@ const FriendsPage = () => {
         </div>
         <div className="app-content-wrap flex-1 flex min-w-0 flex-col">
           <div className="friends-panel">
-            <h1 className="friends-panel__title">Friends</h1>
-            <div className="friends-panel__search">
-              <Search className="friends-panel__search-icon" size={18} />
-              <input
-                type="text"
-                placeholder="Search friends"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="friends-panel__search-input"
-              />
+            <div className="friends-panel__tabs">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`friends-panel__tab ${activeTab === tab.id ? "friends-panel__tab--active" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
+                  aria-pressed={activeTab === tab.id}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            <div className="friends-panel__sort">
-              <button
-                type="button"
-                onClick={() => setSortBy("date")}
-                className={`friends-panel__sort-btn ${sortBy === "date" ? "friends-panel__sort-btn--active" : ""}`}
-                title="Sort by date added"
-                aria-pressed={sortBy === "date"}
-              >
-                <Calendar size={16} />
-                <span>Date added</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSortBy("alphabet")}
-                className={`friends-panel__sort-btn ${sortBy === "alphabet" ? "friends-panel__sort-btn--active" : ""}`}
-                title="Sort A–Z"
-                aria-pressed={sortBy === "alphabet"}
-              >
-                <ArrowDownAZ size={16} />
-                <span>A–Z</span>
-              </button>
-            </div>
-            <div className="friends-panel__list">
-              {sortedFriends.map(({ user, chat }) => {
+
+            {showSearchInList && (
+              <>
+                <div className="friends-panel__search">
+                  <Search className="friends-panel__search-icon" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search friends"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="friends-panel__search-input"
+                  />
+                </div>
+                <div className="friends-panel__sort">
+                <button
+                  type="button"
+                  onClick={() => setSortBy("date")}
+                  className={`friends-panel__sort-btn ${sortBy === "date" ? "friends-panel__sort-btn--active" : ""}`}
+                  title="Sort by date added"
+                  aria-pressed={sortBy === "date"}
+                >
+                  Date added
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy("alphabet")}
+                  className={`friends-panel__sort-btn ${sortBy === "alphabet" ? "friends-panel__sort-btn--active" : ""}`}
+                  title="Sort A–Z"
+                  aria-pressed={sortBy === "alphabet"}
+                >
+                  A–Z
+                </button>
+              </div>
+              </>
+            )}
+
+            <div className="friends-panel__grid">
+              {displayList.map(({ user, chat }) => {
                 if (!user || !chat) return null;
                 const isOnline = (onlineUsers || []).some(
                   (id) => String(id) === String(user._id ?? user),
                 );
                 const displayName = user.fullName ?? user.username ?? "Unknown";
+                const isRequest = activeTab === "requests";
                 return (
-                  <div
-                    key={String(user._id ?? user)}
-                    className="friends-panel__item-wrap"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleFriendClick(user, chat)}
-                      className="friends-panel__item"
-                    >
-                      <div className="friends-panel__avatar-wrap">
+                  <div key={String(user._id ?? user)} className="friends-panel__card">
+                    <div className="friends-panel__card-btn">
+                      <div className="friends-panel__card-avatar-wrap">
                         <img
                           src={user.profilePic || DEFAULT_AVATAR_URL}
                           alt={displayName}
-                          className="friends-panel__avatar"
+                          className="friends-panel__card-avatar"
                         />
-                        {isOnline && <span className="friends-panel__online" />}
                       </div>
-                      <div className="friends-panel__body">
-                        <span className="friends-panel__name">
-                          {displayName}
-                        </span>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => handleRemoveFriend(e, chat, displayName)}
-                      className="friends-panel__remove"
-                      title="Remove friend"
-                      aria-label="Remove friend"
-                    >
-                      <UserMinus size={14} strokeWidth={2.25} />
-                      <span>Remove</span>
-                    </button>
+                      <span className="friends-panel__card-name">{displayName}</span>
+                    </div>
+                    <div className="friends-panel__card-actions">
+                      <button
+                        type="button"
+                        onClick={(e) => handleCall(e, user)}
+                        className="friends-panel__card-action"
+                        title="Voice call"
+                        aria-label="Voice call"
+                      >
+                        <Phone size={14} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleVideoCall(e, user)}
+                        className="friends-panel__card-action"
+                        title="Video call"
+                        aria-label="Video call"
+                      >
+                        <Video size={14} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleMessage(e, user, chat)}
+                        className="friends-panel__card-action friends-panel__card-action--message"
+                        title="Message"
+                        aria-label="Message"
+                      >
+                        <MessageCircle size={14} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                    {!isRequest && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveFriend(e, chat, displayName)}
+                        className="friends-panel__card-remove"
+                        title="Remove friend"
+                        aria-label="Remove friend"
+                      >
+                        <UserMinus size={14} strokeWidth={2.25} />
+                      </button>
+                    )}
                   </div>
                 );
               })}
-              {sortedFriends.length === 0 && (
+              {displayList.length === 0 && (
                 <div className="friends-panel__empty">
-                  {friends.length === 0 ? "No friends yet" : "No matches"}
+                  {activeTab === "requests"
+                    ? "No pending requests"
+                    : friends.length === 0
+                      ? "No friends yet"
+                      : "No matches"}
                 </div>
               )}
             </div>

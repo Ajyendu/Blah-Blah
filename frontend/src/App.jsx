@@ -2,12 +2,9 @@ import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
-import SettingsPage from "./pages/SettingsPage";
-import ProfilePage from "./pages/ProfilePage";
-import FriendsPage from "./pages/FriendsPage";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { flushSync } from "react-dom";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
@@ -19,8 +16,24 @@ import CallingUI from "./components/CallingUI";
 import { useChatStore } from "./store/useChatStore";
 import VideoCallUI from "./components/VideoCallUI";
 import { useAudioCall } from "./store/useAudioCall";
+import { useNoteStore } from "./store/useNoteStore";
+import { useGameStore } from "./store/useGameStore";
+import { useIsMobile } from "./hooks/useMediaQuery";
+
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const FriendsPage = lazy(() => import("./pages/FriendsPage"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader className="size-10 animate-spin text-pink-500" />
+    </div>
+  );
+}
 
 const App = () => {
+  const location = useLocation();
   const { endCall } = useAudioCall();
   const socket = useAuthStore((s) => s.socket);
   const [callType, setCallType] = useState(null);
@@ -32,6 +45,26 @@ const App = () => {
   const [incoming, setIncoming] = useState(null);
   const [callActive, setCallActive] = useState(false);
   const [activeCallUserId, setActiveCallUserId] = useState(null);
+  const isMobile = useIsMobile();
+  const [stringPhase, setStringPhase] = useState("50"); // "50" | "30" | "80"
+  const [stringNextRest, setStringNextRest] = useState(30); // 30 or 50, target after 80%
+  const STRING_FULL = 200;
+  const STRING_DURATION_MS = 200;
+  const stringHeights = { 80: 0.8 * STRING_FULL, 50: 0.5 * STRING_FULL, 30: 0.3 * STRING_FULL };
+  const stringImgScale = { 80: "125%", 50: "200%", 30: "333%" };
+  const STRING_WIDTH = 140;
+
+  useEffect(() => {
+    if (stringPhase !== "80") return;
+    const t = setTimeout(() => setStringPhase(String(stringNextRest)), STRING_DURATION_MS);
+    return () => clearTimeout(t);
+  }, [stringPhase, stringNextRest]);
+
+  const applyPreset = useThemeStore((s) => s.applyPreset);
+  useEffect(() => {
+    if (stringPhase === "50") applyPreset("dark");
+    if (stringPhase === "30") applyPreset("light");
+  }, [stringPhase, applyPreset]);
 
   const cancelCall = () => {
     if (activeCallUserId) {
@@ -49,6 +82,22 @@ const App = () => {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // ✅ Open video panel with URL when landing with ?youtube= (e.g. from bookmarklet)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const youtubeUrlParam = params.get("youtube");
+    if (youtubeUrlParam) {
+      const url = decodeURIComponent(youtubeUrlParam);
+      const noteStore = useNoteStore.getState();
+      noteStore.setPendingYoutubeUrl(url);
+      noteStore.setIsNotesOpen(false);
+      noteStore.setIsDrawingOpen(false);
+      noteStore.setIsVideoPanelOpen(true);
+      useGameStore.getState().setTruthDareOpen(false);
+      window.history.replaceState(null, "", window.location.pathname + (window.location.hash || ""));
+    }
+  }, [location.search]);
 
   // ✅ Load all conversations (with last messages) as soon as user is authenticated and page is opened
   useEffect(() => {
@@ -114,7 +163,54 @@ const App = () => {
 
   return (
     <div className="min-h-screen">
-      {/* <Navbar /> */}
+      {/* Decorative image: click → dark/light mode – hidden on mobile */}
+      {!isMobile && (
+        <div
+          className="app-string-decoration"
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (stringPhase === "80") return;
+            setStringNextRest(stringPhase === "50" ? 30 : 50);
+            setStringPhase("80");
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || stringPhase === "80") return;
+            e.preventDefault();
+            setStringNextRest(stringPhase === "50" ? 30 : 50);
+            setStringPhase("80");
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: "3px",
+            height: `${stringHeights[stringPhase]}px`,
+            width: `${STRING_WIDTH}px`,
+            overflow: "hidden",
+            zIndex: 9999,
+            cursor: "pointer",
+            transition: `height ${STRING_DURATION_MS}ms ease`,
+          }}
+        >
+          <img
+            src="/string.png"
+            alt=""
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              height: stringImgScale[stringPhase],
+              width: "auto",
+              maxWidth: "none",
+              objectFit: "cover",
+              objectPosition: "left bottom",
+              transition: `height ${STRING_DURATION_MS}ms ease`,
+            }}
+          />
+        </div>
+      )}
       <ThemeSync />
 
       <CallListener
@@ -177,16 +273,43 @@ const App = () => {
           path="/login"
           element={!authUser ? <LoginPage /> : <Navigate to="/" />}
         />
-        <Route path="/settings" element={authUser ? <SettingsPage /> : <Navigate to="/login" />} />
+        <Route
+          path="/settings"
+          element={
+            authUser ? (
+              <Suspense fallback={<PageLoader />}>
+                <SettingsPage />
+              </Suspense>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
         <Route
           path="/profile"
-          element={authUser ? <ProfilePage /> : <Navigate to="/login" />}
+          element={
+            authUser ? (
+              <Suspense fallback={<PageLoader />}>
+                <ProfilePage />
+              </Suspense>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
         <Route
           path="/friends"
           element={
             authUser ? (
-              <FriendsPage />
+              <Suspense fallback={<PageLoader />}>
+                <FriendsPage
+                  setCallType={setCallType}
+                  setCalling={setCalling}
+                  setActiveCallUserId={setActiveCallUserId}
+                  setActiveCallUserName={setActiveCallUserName}
+                  setActiveCallUserAvatar={setActiveCallUserAvatar}
+                />
+              </Suspense>
             ) : (
               <Navigate to="/login" />
             )

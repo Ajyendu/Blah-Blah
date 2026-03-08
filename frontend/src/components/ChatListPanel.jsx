@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useNoteStore } from "../store/useNoteStore";
@@ -9,6 +9,8 @@ import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
 import { formatRelativeTime } from "../lib/utils";
 import "./ChatListPanel.css";
 
+const DEBOUNCE_MS = 200;
+
 const ChatListPanel = () => {
   const { chats, getMyChats, selectedChat, setSelectedChat, unreadCountByChatId } = useChatStore();
   const setIsNotesOpen = useNoteStore((s) => s.setIsNotesOpen);
@@ -16,6 +18,12 @@ const ChatListPanel = () => {
   const { onlineUsers, authUser } = useAuthStore();
   const [showNewChat, setShowNewChat] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (authUser?._id) getMyChats();
@@ -36,17 +44,14 @@ const ChatListPanel = () => {
     };
   }, [getMyChats, authUser?._id]);
 
-  const filteredChats =
-    Array.isArray(chats) && searchQuery.trim()
-      ? chats.filter((chat) => {
-          const other = chat.participants?.find((u) => u._id !== authUser?._id);
-          return other?.fullName
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase());
-        })
-      : Array.isArray(chats)
-        ? chats
-        : [];
+  const filteredChats = useMemo(() => {
+    if (!Array.isArray(chats)) return [];
+    if (!debouncedQuery) return chats;
+    return chats.filter((chat) => {
+      const other = chat.participants?.find((u) => u._id !== authUser?._id);
+      return other?.fullName?.toLowerCase().includes(debouncedQuery.toLowerCase());
+    });
+  }, [chats, debouncedQuery, authUser?._id]);
 
   return (
     <div className="chat-list-panel">

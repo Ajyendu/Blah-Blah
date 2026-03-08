@@ -1,26 +1,39 @@
 /* ================= MESSAGE INPUT REF (reference UI) ================= */
 
 .message-input-ref {
-  padding: 12px 20px 20px;
-  background: var(--panel-bg, #fff);
-  border-top: 1px solid #eef0f3;
+  padding: 8px 14px 8px;
+  background: transparent;
+  border: none;
   flex-shrink: 0;
-}
+  min-height: 58px;
 
-.message-input-ref__bar {
+  min-width: 0;
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  background: #f8f9fb;
-  border: 1px solid #eef0f3;
-  border-radius: 24px;
+  box-sizing: border-box;
+}
+.message-input-ref__bar {
+  margin: 0px 0; /* spacing without white sheet */
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 44px;
+  min-height: 44px;
+  width: 100%;
+
+  background: #fff; /* white only inside the bar */
+
+  border: 1px solid var(--surface-border, #eef0f3);
+  border-radius: 22px;
 }
 
 .message-input-ref__attach,
 .message-input-ref__send {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border: none;
   background: transparent;
   border-radius: 50%;
@@ -30,9 +43,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .message-input-ref__attach:hover,
@@ -57,6 +68,12 @@
 .message-input-ref__send {
   background: var(--accent);
   color: #fff;
+  width: 28px;
+  height: 28px;
+}
+
+.message-input-ref__send svg {
+  transform: translate(-1px, 1px);
 }
 
 .message-input-ref__send:hover {
@@ -74,8 +91,8 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 15px;
-  color: #1e293b;
+  font-size: 14px;
+  color: var(--text-primary, #1e293b);
   min-width: 0;
 }
 
@@ -128,9 +145,7 @@
   background: transparent;
   color: #94a3b8;
   cursor: pointer;
-  transition:
-    background 0.2s,
-    color 0.2s;
+  transition: background 0.2s, color 0.2s;
   flex-shrink: 0;
 }
 
@@ -205,8 +220,8 @@
 .timer-picker {
   position: absolute;
   bottom: 100%;
-  left: -48px;
-  margin-bottom: 6px;
+  left: -72px;
+  margin-bottom: 15px;
   padding: 8px 10px 10px;
   background: #000;
   border-radius: 12px;
@@ -236,9 +251,7 @@
   background: rgba(255, 255, 255, 0.08);
   color: #94a3b8;
   cursor: pointer;
-  transition:
-    background 0.2s,
-    color 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .timer-picker__tab:hover {
@@ -294,9 +307,7 @@
   cursor: pointer;
   border-radius: 4px;
   padding: 0;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 .duration-wheel__arrow--up {
@@ -391,4 +402,27 @@
 
 .timer-picker__submit:hover {
   background: var(--accent-dark);
+}
+
+@media (max-width: 768px) {
+  .message-input-ref {
+    padding: 8px 10px 8px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    min-height: 50px;
+  }
+
+  .message-input-ref__bar {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 4px 0 8px;
+    border-radius: 18px;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  .message-input-ref__input {
+    font-size: 16px;
+  }
+  .timer-picker {
+    left: -82px;
+  }
 }

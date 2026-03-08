@@ -2,6 +2,7 @@ import { MessageCircle, Users, User, Settings, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useIsMobile } from "../hooks/useMediaQuery";
 import "./Sidebar.css";
 
 const NAV_ITEMS = [
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const { unreadCountByChatId } = useChatStore();
   const { logout } = useAuthStore();
 
@@ -46,7 +48,7 @@ const Sidebar = () => {
       : null;
 
   return (
-    <aside className="sidebar-ref">
+    <aside className={`sidebar-ref${isMobile ? " sidebar-ref--mobile" : ""}`}>
       <div className="sidebar-ref__logo">
         <div className="sidebar-ref__logo-wrap">
           <img

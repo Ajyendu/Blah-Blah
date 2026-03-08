@@ -200,14 +200,8 @@ export const useAuthStore = create((set, get) => ({
   connectSocket: () => {
     const { authUser, token } = get();
 
-    if (!authUser || !token) {
-      console.log("⛔ No authUser or token, skipping socket connect");
-      return;
-    }
-
+    if (!authUser || !token) return;
     if (!authUser || get().socket) return;
-
-    console.log("🔐 Connecting socket with token:", token);
 
     const backendUrl =
       (import.meta.env.VITE_BACKEND_URL || "").trim() ||
@@ -219,8 +213,6 @@ export const useAuthStore = create((set, get) => ({
     window.socket = socket;
 
     socket.on("connect", () => {
-      console.log("✅ Socket connected:", socket.id);
-
       const chatStore = useChatStore.getState();
       chatStore.subscribeToMessages();
     });

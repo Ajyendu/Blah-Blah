@@ -11,6 +11,8 @@ export const useChatStore = create((set, get) => ({
   selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  isMessagesLoadingMore: false,
+  hasMoreOlderMessages: false,
   chats: [],
   selectedChat: null,
   lastSeenAtByConversation: {},
@@ -70,9 +72,9 @@ export const useChatStore = create((set, get) => ({
     try {
       const id =
         conversationId != null
-          ? (typeof conversationId === "object" && conversationId?.toString
-              ? conversationId.toString()
-              : String(conversationId))
+          ? typeof conversationId === "object" && conversationId?.toString
+            ? conversationId.toString()
+            : String(conversationId)
           : null;
       if (!id) {
         toast.error("Invalid conversation");
@@ -82,25 +84,45 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get("/conversations/my");
       set((state) => {
         const updatedChats = res.data || [];
-        const wasOpen = state.selectedChat?._id === id || state.selectedChat?._id === conversationId;
-        const updatedSelected = updatedChats.find((c) => String(c._id) === String(id));
+        const wasOpen =
+          state.selectedChat?._id === id ||
+          state.selectedChat?._id === conversationId;
+        const updatedSelected = updatedChats.find(
+          (c) => String(c._id) === String(id),
+        );
         return {
           chats: updatedChats,
-          selectedChat: wasOpen && updatedSelected ? updatedSelected : (wasOpen ? null : state.selectedChat),
-          selectedUser: wasOpen && updatedSelected
-            ? (updatedSelected.participants?.find((u) => u && String(u._id ?? u) !== String(useAuthStore.getState().authUser?._id)) ?? null)
-            : (wasOpen ? null : state.selectedUser),
+          selectedChat:
+            wasOpen && updatedSelected
+              ? updatedSelected
+              : wasOpen
+                ? null
+                : state.selectedChat,
+          selectedUser:
+            wasOpen && updatedSelected
+              ? (updatedSelected.participants?.find(
+                  (u) =>
+                    u &&
+                    String(u._id ?? u) !==
+                      String(useAuthStore.getState().authUser?._id),
+                ) ?? null)
+              : wasOpen
+                ? null
+                : state.selectedUser,
           messages: wasOpen && !updatedSelected ? [] : state.messages,
         };
       });
       toast.success("Friend removed");
       get().getMyFriends();
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || "Failed to remove friend";
+      const msg =
+        err.response?.data?.message || err.message || "Failed to remove friend";
       toast.error(msg);
       // If 404, backend may be wrong URL — suggest checking VITE_BACKEND_URL
       if (err.response?.status === 404 && !err.response?.data?.message) {
-        console.warn("Remove friend 404: check VITE_BACKEND_URL points to your backend (no /api suffix)");
+        console.warn(
+          "Remove friend 404: check VITE_BACKEND_URL points to your backend (no /api suffix)",
+        );
       }
     }
   },
@@ -120,9 +142,10 @@ export const useChatStore = create((set, get) => ({
           if (updatedSelected) {
             next.selectedChat = updatedSelected;
             const authId = useAuthStore.getState().authUser?._id;
-            next.selectedUser = updatedSelected.participants?.find(
-              (u) => u && String(u._id ?? u) !== String(authId),
-            ) ?? state.selectedUser;
+            next.selectedUser =
+              updatedSelected.participants?.find(
+                (u) => u && String(u._id ?? u) !== String(authId),
+              ) ?? state.selectedUser;
           }
         }
         return next;
@@ -144,7 +167,9 @@ export const useChatStore = create((set, get) => ({
   ensureChatInList: (chat) => {
     if (!chat?._id) return;
     set((state) => {
-      const exists = state.chats.some((c) => String(c._id) === String(chat._id));
+      const exists = state.chats.some(
+        (c) => String(c._id) === String(chat._id),
+      );
       if (exists) return state;
       return { chats: [chat, ...state.chats] };
     });
@@ -222,39 +247,79 @@ export const useChatStore = create((set, get) => ({
 
   getMessagesByConversation: async (conversationId) => {
     if (!conversationId) {
-      set({ messages: [] });
+      set({ messages: [], hasMoreOlderMessages: false });
       return;
     }
 
-    const res = await axiosInstance.get(
-      `/messages/conversation/${conversationId}`,
-    );
+    set({ isMessagesLoading: true });
+    try {
+      const res = await axiosInstance.get(
+        `/messages/conversation/${conversationId}`,
+        { params: { limit: 50 } },
+      );
 
-    const messageList = res.data || [];
-    set({ messages: messageList });
+      const data = res.data || {};
+      const messageList = Array.isArray(data) ? data : (data.messages || []);
+      const hasMore = data.hasMore === true;
 
-    const lastInChat = messageList.length > 0 ? messageList[messageList.length - 1] : null;
-    set((state) => ({
-      chats: state.chats.map((c) =>
-        String(c._id) === String(conversationId)
-          ? { ...c, lastMessage: lastInChat }
-          : c,
-      ),
-    }));
-
-    // Mark as seen only when tab is visible to the user
-    if (
-      typeof document !== "undefined" &&
-      document.visibilityState !== "visible"
-    )
-      return;
-    const authUser = useAuthStore.getState().authUser;
-    const socket = useAuthStore.getState().socket;
-    if (authUser?._id && socket) {
-      socket.emit("chat_opened", {
-        chatId: conversationId,
-        userId: authUser._id,
+      set({
+        messages: messageList,
+        hasMoreOlderMessages: hasMore,
+        isMessagesLoading: false,
       });
+
+      const lastInChat =
+        messageList.length > 0 ? messageList[messageList.length - 1] : null;
+      set((state) => ({
+        chats: state.chats.map((c) =>
+          String(c._id) === String(conversationId)
+            ? { ...c, lastMessage: lastInChat }
+            : c,
+        ),
+      }));
+
+      // Mark as seen only when tab is visible to the user
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState !== "visible"
+      )
+        return;
+      const authUser = useAuthStore.getState().authUser;
+      const socket = useAuthStore.getState().socket;
+      if (authUser?._id && socket) {
+        socket.emit("chat_opened", {
+          chatId: conversationId,
+          userId: authUser._id,
+        });
+      }
+    } catch (err) {
+      set({ messages: [], isMessagesLoading: false });
+    }
+  },
+
+  loadMoreOlderMessages: async (conversationId) => {
+    const state = get();
+    const { messages: currentMessages, hasMoreOlderMessages, isMessagesLoadingMore } = state;
+    if (!conversationId || !hasMoreOlderMessages || isMessagesLoadingMore || !Array.isArray(currentMessages) || currentMessages.length === 0) {
+      return;
+    }
+    const oldestId = currentMessages[0]._id;
+    set({ isMessagesLoadingMore: true });
+    try {
+      const res = await axiosInstance.get(
+        `/messages/conversation/${conversationId}`,
+        { params: { limit: 50, before: oldestId } },
+      );
+      const data = res.data || {};
+      const olderList = Array.isArray(data) ? [] : (data.messages || []);
+      const hasMore = data.hasMore === true;
+      set((s) => ({
+        messages: [...olderList, ...s.messages],
+        hasMoreOlderMessages: hasMore,
+        isMessagesLoadingMore: false,
+      }));
+    } catch (err) {
+      set({ isMessagesLoadingMore: false });
     }
   },
 
@@ -442,14 +507,17 @@ export const useChatStore = create((set, get) => ({
 
     socket.on("chatRejected", ({ conversationId }) => {
       const { selectedChat } = get();
-      const isSelected = selectedChat && String(selectedChat._id) === String(conversationId);
+      const isSelected =
+        selectedChat && String(selectedChat._id) === String(conversationId);
 
       if (isSelected) {
         // Show "Request rejected" in chatbox first; remove chat after delay
         set({ rejectedChatId: conversationId });
         setTimeout(() => {
           set((state) => ({
-            chats: state.chats.filter((c) => String(c._id) !== String(conversationId)),
+            chats: state.chats.filter(
+              (c) => String(c._id) !== String(conversationId),
+            ),
             selectedChat: null,
             selectedUser: null,
             messages: [],
@@ -516,7 +584,8 @@ export const useChatStore = create((set, get) => ({
   clearMessagesForCurrentChat: async () => {
     const state = get();
     const msgs = [...(state.messages || [])];
-    const currentChatId = state.selectedChat?._id != null ? String(state.selectedChat._id) : null;
+    const currentChatId =
+      state.selectedChat?._id != null ? String(state.selectedChat._id) : null;
     set({
       messages: [],
       chats: currentChatId
@@ -539,10 +608,14 @@ export const useChatStore = create((set, get) => ({
       }
     }
     if (failed === 0) {
-      toast.success("Conversation cleared for you. The other person can still see the messages.");
+      toast.success(
+        "Conversation cleared for you. The other person can still see the messages.",
+      );
       // Remove conversation from panel and close it
       set((s) => ({
-        chats: currentChatId ? s.chats.filter((c) => String(c._id) !== currentChatId) : s.chats,
+        chats: currentChatId
+          ? s.chats.filter((c) => String(c._id) !== currentChatId)
+          : s.chats,
         selectedChat: null,
         selectedUser: null,
         messages: [],

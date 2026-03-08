@@ -6,6 +6,7 @@ import { getReceiverSocketId, io, emitToUser } from "../lib/socket.js";
 import Conversation from "../models/conversation.model.js";
 import RejectedRequest from "../models/rejectedRequest.model.js";
 import { generateAIReply } from "../AI/aiService.js";
+import { encrypt, decrypt } from "../lib/encryption.js";
 
 const aiUsageMap = new Map();
 
@@ -73,8 +74,16 @@ export const deleteMessage = async (req, res) => {
       };
 
       // 🔥 SEND TO BOTH USERS (each may have multiple sockets)
-      emitToUser(message.senderId.toString(), "messageDeletedForEveryone", payload);
-      emitToUser(message.receiverId.toString(), "messageDeletedForEveryone", payload);
+      emitToUser(
+        message.senderId.toString(),
+        "messageDeletedForEveryone",
+        payload,
+      );
+      emitToUser(
+        message.receiverId.toString(),
+        "messageDeletedForEveryone",
+        payload,
+      );
 
       return res.json({ success: true });
     }
@@ -98,7 +107,8 @@ export const getMessages = async (req, res) => {
       ],
     });
 
-    res.status(200).json(messages);
+    const normalized = messages.map((m) => normalizeMessage(m.toObject()));
+    res.status(200).json(normalized);
   } catch (error) {
     console.log("Error in getMessages controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
@@ -163,7 +173,7 @@ export const sendMessageByCode = async (req, res) => {
         chatId: chat._id,
         senderId,
         receiverId: receiver._id,
-        text: textTrim,
+        text: encrypt(textTrim),
       });
       chat.lastMessage = message._id;
       await chat.save();
@@ -182,10 +192,12 @@ export const sendMessageByCode = async (req, res) => {
     const receiverSocket = getReceiverSocketId(receiver._id.toString());
     const senderSocket = getReceiverSocketId(senderId.toString());
     if (receiverSocket.length) {
-      for (const sid of receiverSocket) io.to(sid).emit("newChatMessage", payload);
+      for (const sid of receiverSocket)
+        io.to(sid).emit("newChatMessage", payload);
     }
     if (senderSocket.length) {
-      for (const sid of senderSocket) io.to(sid).emit("newChatMessage", payload);
+      for (const sid of senderSocket)
+        io.to(sid).emit("newChatMessage", payload);
     }
 
     return res.status(200).json({ chat: populatedChat });
@@ -199,52 +211,75 @@ export const getMessagesByConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user._id;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 50);
+    const beforeId = req.query.before || null;
 
-    // mark unseen messages as seen
-    const unseenMessages = await Message.find({
-      chatId: conversationId,
-      receiverId: userId,
-      seen: false,
-      $or: [
-        { visibleTo: { $exists: false } }, // old messages
-        { visibleTo: { $size: 0 } }, // public messages
-        { visibleTo: userId }, // private visible messages
-      ],
-    });
-
-    if (unseenMessages.length > 0) {
-      const seenAt = new Date();
-
-      await Message.updateMany(
-        {
-          chatId: conversationId,
-          receiverId: userId,
-          seen: false,
-        },
-        { $set: { seen: true, seenAt } },
-      );
-
-      unseenMessages.forEach((msg) => {
-        const senderSockets = getReceiverSocketId(msg.senderId.toString());
-        for (const sid of senderSockets) {
-          io.to(sid).emit("messageSeen", { messageId: msg._id, seenAt });
-        }
+    // mark unseen messages as seen (only on initial load, not when loading older)
+    if (!beforeId) {
+      const unseenMessages = await Message.find({
+        chatId: conversationId,
+        receiverId: userId,
+        seen: false,
+        $or: [
+          { visibleTo: { $exists: false } }, // old messages
+          { visibleTo: { $size: 0 } }, // public messages
+          { visibleTo: userId }, // private visible messages
+        ],
       });
+
+      if (unseenMessages.length > 0) {
+        const seenAt = new Date();
+
+        await Message.updateMany(
+          {
+            chatId: conversationId,
+            receiverId: userId,
+            seen: false,
+          },
+          { $set: { seen: true, seenAt } },
+        );
+
+        unseenMessages.forEach((msg) => {
+          const senderSockets = getReceiverSocketId(msg.senderId.toString());
+          for (const sid of senderSockets) {
+            io.to(sid).emit("messageSeen", { messageId: msg._id, seenAt });
+          }
+        });
+      }
     }
 
-    const messages = await Message.find({
+    const baseQuery = {
       chatId: conversationId,
       $or: [
         { visibleTo: { $size: 0 } }, // normal messages
         { visibleTo: userId }, // private visible
       ],
-      deletedFor: { $nin: [userId] }, // exclude messages this user deleted for themselves
-    });
+      deletedFor: { $nin: [userId] },
+    };
 
-    const normalized = messages.map((m) => normalizeMessage(m.toObject()));
+    const findFilter = { ...baseQuery };
+    if (beforeId) {
+      const beforeMsg = await Message.findOne({
+        _id: beforeId,
+        chatId: conversationId,
+      }).lean();
+      if (beforeMsg) {
+        findFilter.createdAt = { $lt: new Date(beforeMsg.createdAt) };
+      }
+    }
 
-    // ✅ SEND ONCE — THIS IS THE FIX
-    res.status(200).json(normalized);
+    const messages = await Message.find(findFilter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const normalized = messages
+      .map((m) => normalizeMessage({ ...m }))
+      .reverse();
+
+    const hasMore = messages.length === limit;
+
+    res.status(200).json({ messages: normalized, hasMore });
   } catch (err) {
     console.error("getMessagesByConversation error:", err);
     res.status(500).json({ message: "Internal server error" });
@@ -299,9 +334,9 @@ export const sendMessage = async (req, res) => {
       chatId: conversation._id,
       senderId,
       receiverId,
-      text: text || "",
+      text: encrypt(text || ""),
       image: imageUrl,
-      fileName: savedFileName,
+      fileName: encrypt(savedFileName) || "",
       revealAt: isTimed ? new Date(revealAt) : null,
       revealed: !isTimed,
       isPrivateAI,
@@ -353,7 +388,7 @@ export const sendMessage = async (req, res) => {
         .map((m) => {
           const role =
             m.senderId.toString() === senderId.toString() ? "User" : "buddy";
-          return `${role}: ${m.text}`;
+          return `${role}: ${decrypt(m.text)}`;
         })
         .join("\n");
 
@@ -382,7 +417,7 @@ export const sendMessage = async (req, res) => {
         aiReply =
           "Summary:\n" +
           contextMessages
-            .map((m) => m.text)
+            .map((m) => decrypt(m.text))
             .join(" ")
             .slice(0, 250);
       }
@@ -418,7 +453,7 @@ export const sendMessage = async (req, res) => {
         chatId: conversation._id,
         senderId: BOT_ID,
         receiverId: senderId,
-        text: aiReply,
+        text: encrypt(aiReply),
         isPrivateAI: true,
         visibleTo: [senderId],
         revealed: true,
@@ -447,5 +482,8 @@ function normalizeMessage(message) {
   ) {
     message.revealed = true;
   }
+  if (message.text != null) message.text = decrypt(message.text);
+  if (message.fileName != null && message.fileName !== "")
+    message.fileName = decrypt(message.fileName);
   return message;
 }

@@ -13,7 +13,9 @@ import messageRoutes from "./routes/message.route.js";
 import conversationRoutes from "./routes/conversation.route.js";
 import readyRoutes from "./routes/ready.route.js";
 import noteRoutes from "./routes/note.routes.js";
+import drawingRoutes from "./routes/drawing.route.js";
 import chatDNARoutes from "./routes/chatDNA.js";
+import watchPartyRoutes from "./routes/watchParty.route.js";
 dotenv.config();
 
 const app = express();
@@ -40,7 +42,9 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/ready", readyRoutes);
 app.use("/api/notes", noteRoutes);
+app.use("/api/drawings", drawingRoutes);
 app.use("/api/chat-dna", chatDNARoutes);
+app.use("/api/watch-party", watchPartyRoutes);
 
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {

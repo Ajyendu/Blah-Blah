@@ -1,10 +1,37 @@
 /* ================= CHAT REF (reference UI) ================= */
 
+/* Input bar stays above bottom sheet (sheet has z-index 100) */
+.chat-input-bar-wrap {
+  position: relative;
+  z-index: 101;
+  flex-shrink: 0;
+  background: transparent;
+  border-bottom-left-radius: var(--content-corner-radius, 30px);
+  border-bottom-right-radius: var(--content-corner-radius, 30px);
+  border-top-left-radius: var(--content-corner-radius, 30px);
+  border-top-right-radius: var(--content-corner-radius, 30px);
+  margin-bottom: 4px; /* move bar up slightly */
+  touch-action: none;
+}
+
 .chat-container-ref {
   flex: 1;
+  min-height: 0; /* allow shrink so overflow scroll works in flex layout */
   overflow-y: auto;
-  padding: 16px 20px 8px;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; /* allow vertical scroll when panel is open or hidden */
+  padding: 16px 20px 24px; /* extra bottom padding so last message shows clearly above input bar */
   border-radius: 0;
+}
+
+.chat-date-divider {
+  text-align: center;
+  padding: 0.5rem 0;
+  margin: 0.25rem 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
 }
 
 /* Persistent "other user is playing" indicator when B is in chat (not in game panel) */
@@ -87,8 +114,8 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  max-width: 85%;
-  margin-bottom: 2px;
+  max-width: 50%;
+  margin-bottom: 10px;
 }
 .msg-row--mine {
   flex-direction: row-reverse;
@@ -96,6 +123,16 @@
 }
 .msg-row--theirs {
   margin-right: auto;
+}
+
+/* Consecutive messages from same sender: 2px gap only */
+.msg-row--follows-same {
+  margin-top: 0;
+}
+
+/* When next message is same sender, reduce gap below this row to 2px */
+.msg-row--same-sender-below {
+  margin-bottom: 2px;
 }
 
 .msg-row__avatar {
@@ -110,7 +147,7 @@
 .msg-bubble-ref {
   display: block;
   width: fit-content;
-  max-width: 75%;
+  max-width: 45%;
   padding: 14px;
   font-size: 14px;
   line-height: 1.45;
@@ -129,8 +166,8 @@
 }
 
 .msg-bubble-ref--theirs {
-  background: #fdf2f8;
-  color: #1e293b;
+  background: var(--bubble-other, #fdf2f8);
+  color: var(--text-primary, #1e293b);
   border: none;
 }
 
@@ -199,9 +236,7 @@
   line-height: 1;
   color: #64748b;
   cursor: pointer;
-  transition:
-    opacity 0.15s,
-    background 0.15s;
+  transition: opacity 0.15s, background 0.15s;
 }
 .msg-three-dots-btn:hover {
   background: rgba(0, 0, 0, 0.06);
@@ -209,13 +244,12 @@
 
 /* Message dropdown (Delete, Mark note, timestamp) */
 .msg-dropdown {
-  min-width: 130px;
+  min-width: 165px;
   padding: 4px;
-  background: #fff;
+  background: var(--panel-bg, #fff);
+  border: 1px solid var(--surface-border, rgba(0, 0, 0, 0.06));
   border-radius: 8px;
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.12),
-    0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
 
@@ -237,15 +271,16 @@
   background: none;
   font-size: 12px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--text-primary, #1e293b);
   text-align: left;
   cursor: pointer;
   transition: background 0.12s ease;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .msg-dropdown__item:hover {
-  background: #e0f2fe;
+  background: var(--chat-list-item-hover-bg, #e0f2fe);
   padding: 6px 10px;
 }
 
@@ -254,16 +289,16 @@
 }
 
 .msg-dropdown__item--danger:hover {
-  background: #fee2e2;
+  background: rgba(220, 38, 38, 0.15);
 }
 
 .msg-dropdown__item--muted {
   padding: 5px 10px 6px;
   font-size: 10px;
   font-weight: 400;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   cursor: default;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--surface-border, #f1f5f9);
   margin-top: 1px;
   margin-left: 0;
   margin-right: 0;
@@ -277,9 +312,9 @@
   padding: 5px 10px 6px;
   font-size: 10px;
   font-weight: 400;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   cursor: default;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--surface-border, #f1f5f9);
   margin-top: 1px;
   margin-left: 0;
   margin-right: 0;
@@ -296,7 +331,7 @@
 }
 
 .msg-dropdown__item .msg-dropdown__icon {
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
 }
 
 .msg-dropdown__item--danger .msg-dropdown__icon {
@@ -364,4 +399,10 @@
 .msg-attachment-file {
   font-size: 13px;
   text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .msg-bubble-ref {
+    padding: 8px 10px;
+  }
 }

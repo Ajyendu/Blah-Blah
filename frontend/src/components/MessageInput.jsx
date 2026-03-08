@@ -140,7 +140,9 @@ function DurationWheelColumn({ value, max, label, onChange, format }) {
           {displayValues.map((v, idx) => (
             <div
               key={idx}
-              className={`duration-wheel__item ${idx === 1 ? "duration-wheel__item--selected" : ""}`}
+              className={`duration-wheel__item ${
+                idx === 1 ? "duration-wheel__item--selected" : ""
+              }`}
               style={{ height: ITEM_HEIGHT }}
             >
               {formatItem(v)}
@@ -182,6 +184,22 @@ const MessageInput = () => {
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const el = document.querySelector(".chat-input-bar-wrap");
+    if (!el) return;
+
+    const preventScroll = (e) => {
+      e.preventDefault();
+    };
+
+    el.addEventListener("wheel", preventScroll, { passive: false });
+    el.addEventListener("touchmove", preventScroll, { passive: false });
+
+    return () => {
+      el.removeEventListener("wheel", preventScroll);
+      el.removeEventListener("touchmove", preventScroll);
+    };
+  }, []);
 
   // datetime (year, month 1-12, day 1-31, hours 0-23, minutes 0-59, seconds 0-59)
   const defaultDt = () => {
@@ -240,7 +258,7 @@ const MessageInput = () => {
         dtDay,
         dtHours,
         dtMinutes,
-        dtSeconds,
+        dtSeconds
       );
       if (
         c.year !== dtYear ||
@@ -264,7 +282,10 @@ const MessageInput = () => {
 
   /** Receiver sees Accept/Reject until they accept; messaging is allowed on both devices (no block). */
   const createdById = selectedChat?.createdBy?._id ?? selectedChat?.createdBy;
-  const isReceiver = authUser?._id && selectedChat && String(createdById) !== String(authUser._id);
+  const isReceiver =
+    authUser?._id &&
+    selectedChat &&
+    String(createdById) !== String(authUser._id);
   const showAcceptReject =
     selectedChat && !selectedChat.acceptedBy && isReceiver;
 
@@ -316,7 +337,7 @@ const MessageInput = () => {
         day,
         dtHours,
         dtMinutes,
-        dtSeconds,
+        dtSeconds
       ).getTime();
       if (target <= Date.now()) {
         toast.error("Choose a future date and time");
@@ -342,14 +363,20 @@ const MessageInput = () => {
     }
 
     // 🔥 TIMER STARTS HERE
-    const revealAt = fileAndTimerDisabled ? null : (previewMs ? Date.now() + previewMs : null);
+    const revealAt = fileAndTimerDisabled
+      ? null
+      : previewMs
+      ? Date.now() + previewMs
+      : null;
 
     await sendMessage({
       receiverId: selectedUser._id,
       conversationId: selectedChat._id,
       text: text.trim(),
       image: fileAndTimerDisabled ? undefined : imagePreview,
-      fileName: fileAndTimerDisabled ? undefined : (attachedFileName || undefined),
+      fileName: fileAndTimerDisabled
+        ? undefined
+        : attachedFileName || undefined,
       revealAt,
       revealed: !revealAt,
     });
@@ -450,11 +477,15 @@ const MessageInput = () => {
         />
         <button
           type="button"
-          className={`message-input-ref__attach ${fileAndTimerDisabled ? "message-input-ref__attach--disabled" : ""}`}
+          className={`message-input-ref__attach ${
+            fileAndTimerDisabled ? "message-input-ref__attach--disabled" : ""
+          }`}
           onClick={() => !fileAndTimerDisabled && fileInputRef.current?.click()}
           aria-label="Attach"
           disabled={fileAndTimerDisabled}
-          title={fileAndTimerDisabled ? "Available after chat is accepted" : "Attach"}
+          title={
+            fileAndTimerDisabled ? "Available after chat is accepted" : "Attach"
+          }
         >
           <Paperclip size={20} />
         </button>
@@ -470,364 +501,380 @@ const MessageInput = () => {
           ref={pickerRef}
         >
           {showPicker && (
-            <div className={`timer-picker ${previewMs ? "timer-picker--shift-up" : ""}`}>
+            <div
+              className={`timer-picker ${
+                previewMs ? "timer-picker--shift-up" : ""
+              }`}
+            >
               <div className="timer-picker__tabs">
-            <button
+                <button
                   type="button"
-                  className={`timer-picker__tab ${mode === "datetime" ? "timer-picker__tab--active" : ""}`}
-              onClick={() => setMode("datetime")}
-            >
-              Date & Time
-            </button>
-            <button
+                  className={`timer-picker__tab ${
+                    mode === "datetime" ? "timer-picker__tab--active" : ""
+                  }`}
+                  onClick={() => setMode("datetime")}
+                >
+                  Date & Time
+                </button>
+                <button
                   type="button"
-                  className={`timer-picker__tab ${mode === "duration" ? "timer-picker__tab--active" : ""}`}
-              onClick={() => setMode("duration")}
-            >
-              Duration
-            </button>
-          </div>
+                  className={`timer-picker__tab ${
+                    mode === "duration" ? "timer-picker__tab--active" : ""
+                  }`}
+                  onClick={() => setMode("duration")}
+                >
+                  Duration
+                </button>
+              </div>
 
-          {mode === "duration" && (
+              {mode === "duration" && (
                 <div className="timer-picker__duration">
                   <div className="duration-wheel">
                     <DurationWheelColumn
-                  value={hours}
+                      value={hours}
                       max={23}
                       label="h"
                       onChange={setHours}
                       format={(v) => String(v).padStart(2, "0") + "h"}
                     />
                     <DurationWheelColumn
-                  value={minutes}
+                      value={minutes}
                       max={59}
                       label="m"
                       onChange={setMinutes}
                       format={(v) => String(v).padStart(2, "0") + "m"}
                     />
                     <DurationWheelColumn
-                  value={seconds}
+                      value={seconds}
                       max={59}
                       label="s"
                       onChange={setSeconds}
                       format={(v) => String(v).padStart(2, "0") + "s"}
                     />
-              </div>
+                  </div>
                 </div>
-          )}
+              )}
 
-          {mode === "datetime" && (
+              {mode === "datetime" && (
                 <div className="timer-picker__datetime">
                   <div className="timer-picker__duration timer-picker__duration--datetime">
                     {hasPickedTimeOnce ? (
                       <>
                         <div className="duration-wheel">
-                      <DurationWheelColumn
-                        value={dtHours}
-                        max={23}
-                        label="Hours"
-                        onChange={(v) => {
-                          setHasPickedTimeOnce(true);
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            dtDay,
-                            v,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                      />
-                      <DurationWheelColumn
-                        value={dtMinutes}
-                        max={59}
-                        label="Minutes"
-                        onChange={(v) => {
-                          setHasPickedTimeOnce(true);
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            dtDay,
-                            dtHours,
-                            v,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                      />
-                      <DurationWheelColumn
-                        value={dtSeconds}
-                        max={59}
-                        label="Seconds"
-                        onChange={(v) => {
-                          setHasPickedTimeOnce(true);
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            dtDay,
-                            dtHours,
-                            dtMinutes,
-                            v,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                      />
-                    </div>
+                          <DurationWheelColumn
+                            value={dtHours}
+                            max={23}
+                            label="Hours"
+                            onChange={(v) => {
+                              setHasPickedTimeOnce(true);
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                dtDay,
+                                v,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                          />
+                          <DurationWheelColumn
+                            value={dtMinutes}
+                            max={59}
+                            label="Minutes"
+                            onChange={(v) => {
+                              setHasPickedTimeOnce(true);
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                dtDay,
+                                dtHours,
+                                v,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                          />
+                          <DurationWheelColumn
+                            value={dtSeconds}
+                            max={59}
+                            label="Seconds"
+                            onChange={(v) => {
+                              setHasPickedTimeOnce(true);
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                dtDay,
+                                dtHours,
+                                dtMinutes,
+                                v
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                          />
+                        </div>
                         <div className="duration-wheel duration-wheel--row">
-                      <DurationWheelColumn
-                        value={dtYear - CURRENT_YEAR}
-                        max={20}
-                        label="Year"
-                        onChange={(v) => {
-                          const y = CURRENT_YEAR + v;
-                          const c = clampToFuture(
-                            y,
-                            dtMonth,
-                            dtDay,
-                            dtHours,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                        format={(v) => String(CURRENT_YEAR + v)}
-                      />
-                      <DurationWheelColumn
-                        value={dtMonth - 1}
-                        max={11}
-                        label="Month"
-                        onChange={(v) => {
-                          const m = v + 1;
-                          const c = clampToFuture(
-                            dtYear,
-                            m,
-                            dtDay,
-                            dtHours,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                        format={(v) => String(v + 1).padStart(2, "0")}
-                      />
-                      <DurationWheelColumn
-                        value={
-                          Math.min(dtDay, getDaysInMonth(dtYear, dtMonth)) - 1
-                        }
-                        max={30}
-                        label="Date"
-                        onChange={(v) => {
-                          const d = v + 1;
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            d,
-                            dtHours,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                        format={(v) => String(v + 1).padStart(2, "0")}
-                      />
-              </div>
+                          <DurationWheelColumn
+                            value={dtYear - CURRENT_YEAR}
+                            max={20}
+                            label="Year"
+                            onChange={(v) => {
+                              const y = CURRENT_YEAR + v;
+                              const c = clampToFuture(
+                                y,
+                                dtMonth,
+                                dtDay,
+                                dtHours,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                            format={(v) => String(CURRENT_YEAR + v)}
+                          />
+                          <DurationWheelColumn
+                            value={dtMonth - 1}
+                            max={11}
+                            label="Month"
+                            onChange={(v) => {
+                              const m = v + 1;
+                              const c = clampToFuture(
+                                dtYear,
+                                m,
+                                dtDay,
+                                dtHours,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                            format={(v) => String(v + 1).padStart(2, "0")}
+                          />
+                          <DurationWheelColumn
+                            value={
+                              Math.min(dtDay, getDaysInMonth(dtYear, dtMonth)) -
+                              1
+                            }
+                            max={30}
+                            label="Date"
+                            onChange={(v) => {
+                              const d = v + 1;
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                d,
+                                dtHours,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                            format={(v) => String(v + 1).padStart(2, "0")}
+                          />
+                        </div>
                       </>
                     ) : (
                       <>
-                    <div className="duration-wheel duration-wheel--row">
-                      <DurationWheelColumn
-                        value={dtYear - CURRENT_YEAR}
-                        max={20}
-                        label="Year"
-                        onChange={(v) => {
-                          const y = CURRENT_YEAR + v;
-                          const c = clampToFuture(
-                            y,
-                            dtMonth,
-                            dtDay,
-                            dtHours,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                        format={(v) => String(CURRENT_YEAR + v)}
-                      />
-                      <DurationWheelColumn
-                        value={dtMonth - 1}
-                        max={11}
-                        label="Month"
-                        onChange={(v) => {
-                          const m = v + 1;
-                          const c = clampToFuture(
-                            dtYear,
-                            m,
-                            dtDay,
-                            dtHours,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                        format={(v) => String(v + 1).padStart(2, "0")}
-                      />
-                      <DurationWheelColumn
-                        value={
-                          Math.min(dtDay, getDaysInMonth(dtYear, dtMonth)) - 1
-                        }
-                        max={30}
-                        label="Date"
-                        onChange={(v) => {
-                          const d = v + 1;
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            d,
-                            dtHours,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                        format={(v) => String(v + 1).padStart(2, "0")}
-                      />
-              </div>
-                    <div className="duration-wheel">
-                      <DurationWheelColumn
-                        value={dtHours}
-                        max={23}
-                        label="Hours"
-                        onChange={(v) => {
-                          setHasPickedTimeOnce(true);
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            dtDay,
-                            v,
-                            dtMinutes,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                      />
-                      <DurationWheelColumn
-                        value={dtMinutes}
-                        max={59}
-                        label="Minutes"
-                        onChange={(v) => {
-                          setHasPickedTimeOnce(true);
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            dtDay,
-                            dtHours,
-                            v,
-                            dtSeconds,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                      />
-                      <DurationWheelColumn
-                        value={dtSeconds}
-                        max={59}
-                        label="Seconds"
-                        onChange={(v) => {
-                          setHasPickedTimeOnce(true);
-                          const c = clampToFuture(
-                            dtYear,
-                            dtMonth,
-                            dtDay,
-                            dtHours,
-                            dtMinutes,
-                            v,
-                          );
-                          setDtYear(c.year);
-                          setDtMonth(c.month);
-                          setDtDay(c.day);
-                          setDtHours(c.hours);
-                          setDtMinutes(c.minutes);
-                          setDtSeconds(c.seconds);
-                        }}
-                      />
-                    </div>
+                        <div className="duration-wheel duration-wheel--row">
+                          <DurationWheelColumn
+                            value={dtYear - CURRENT_YEAR}
+                            max={20}
+                            label="Year"
+                            onChange={(v) => {
+                              const y = CURRENT_YEAR + v;
+                              const c = clampToFuture(
+                                y,
+                                dtMonth,
+                                dtDay,
+                                dtHours,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                            format={(v) => String(CURRENT_YEAR + v)}
+                          />
+                          <DurationWheelColumn
+                            value={dtMonth - 1}
+                            max={11}
+                            label="Month"
+                            onChange={(v) => {
+                              const m = v + 1;
+                              const c = clampToFuture(
+                                dtYear,
+                                m,
+                                dtDay,
+                                dtHours,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                            format={(v) => String(v + 1).padStart(2, "0")}
+                          />
+                          <DurationWheelColumn
+                            value={
+                              Math.min(dtDay, getDaysInMonth(dtYear, dtMonth)) -
+                              1
+                            }
+                            max={30}
+                            label="Date"
+                            onChange={(v) => {
+                              const d = v + 1;
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                d,
+                                dtHours,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                            format={(v) => String(v + 1).padStart(2, "0")}
+                          />
+                        </div>
+                        <div className="duration-wheel">
+                          <DurationWheelColumn
+                            value={dtHours}
+                            max={23}
+                            label="Hours"
+                            onChange={(v) => {
+                              setHasPickedTimeOnce(true);
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                dtDay,
+                                v,
+                                dtMinutes,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                          />
+                          <DurationWheelColumn
+                            value={dtMinutes}
+                            max={59}
+                            label="Minutes"
+                            onChange={(v) => {
+                              setHasPickedTimeOnce(true);
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                dtDay,
+                                dtHours,
+                                v,
+                                dtSeconds
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                          />
+                          <DurationWheelColumn
+                            value={dtSeconds}
+                            max={59}
+                            label="Seconds"
+                            onChange={(v) => {
+                              setHasPickedTimeOnce(true);
+                              const c = clampToFuture(
+                                dtYear,
+                                dtMonth,
+                                dtDay,
+                                dtHours,
+                                dtMinutes,
+                                v
+                              );
+                              setDtYear(c.year);
+                              setDtMonth(c.month);
+                              setDtDay(c.day);
+                              setDtHours(c.hours);
+                              setDtMinutes(c.minutes);
+                              setDtSeconds(c.seconds);
+                            }}
+                          />
+                        </div>
                       </>
                     )}
                   </div>
                 </div>
-          )}
+              )}
 
-          <button
+              <button
                 type="button"
-            onClick={applyTimer}
+                onClick={applyTimer}
                 className="timer-picker__submit"
-          >
-            Set Timer
-          </button>
-        </div>
-      )}
+              >
+                Set Timer
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => !fileAndTimerDisabled && setShowPicker((v) => !v)}
-            className={`message-input-ref__attach ${fileAndTimerDisabled ? "message-input-ref__attach--disabled" : ""}`}
+            className={`message-input-ref__attach ${
+              fileAndTimerDisabled ? "message-input-ref__attach--disabled" : ""
+            }`}
             aria-label="Schedule"
             disabled={fileAndTimerDisabled}
-            title={fileAndTimerDisabled ? "Available after chat is accepted" : "Schedule"}
+            title={
+              fileAndTimerDisabled
+                ? "Available after chat is accepted"
+                : "Schedule"
+            }
           >
             <Clock size={18} />
           </button>

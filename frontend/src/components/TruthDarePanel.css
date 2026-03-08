@@ -51,6 +51,12 @@
   color: #fff;
 }
 
+@media (max-width: 768px) {
+  .truth-dare-panel__header {
+    display: none;
+  }
+}
+
 .truth-dare-panel__body {
   flex: 1;
   overflow-y: auto;

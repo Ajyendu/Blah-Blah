@@ -187,6 +187,11 @@ export function useAudioCall() {
       navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" })
     );
 
+    if (pc.signalingState === "closed") {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
     if (type === "video") {
       attachLocalVideo(stream);
     }
@@ -249,6 +254,11 @@ export function useAudioCall() {
     }).catch(() =>
       navigator.mediaDevices.getUserMedia({ audio: true, video: callType === "video" })
     );
+
+    if (pc.signalingState === "closed") {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
 
     localStreamRef.current = stream;
 

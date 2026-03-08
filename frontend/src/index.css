@@ -4,6 +4,7 @@
 
 :root {
   --app-bg: #ffffff;
+  --auth-illus-bg: #ffffff;
   --primary: #3b82f6;
   --accent: #ec4899;
   --accent-dark: #be185d;
@@ -58,3 +59,14 @@
     opacity: 1;
   }
 }
+
+/* Hide scrollbars app-wide; scrolling still works via touch/wheel */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+

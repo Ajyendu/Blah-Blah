@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import "./mood.css";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
@@ -203,7 +203,7 @@ function TimedMedia({ message }) {
 
 /* ================= MESSAGE SWITCH ================= */
 
-function MessageItem({ message, onReveal }) {
+function MessageItemInner({ message, onReveal }) {
   const { authUser } = useAuthStore();
   const [botTyping, setBotTyping] = useState(false);
 
@@ -274,5 +274,18 @@ function MessageItem({ message, onReveal }) {
     </div>
   );
 }
+
+const MessageItem = memo(MessageItemInner, (prev, next) => {
+  const a = prev.message;
+  const b = next.message;
+  if (!a || !b || a._id !== b._id) return false;
+  return (
+    a.text === b.text &&
+    a.revealed === b.revealed &&
+    a.image === b.image &&
+    a.fileName === b.fileName &&
+    a.revealAt === b.revealAt
+  );
+});
 
 export default MessageItem;

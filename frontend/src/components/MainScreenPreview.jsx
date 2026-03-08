@@ -32,6 +32,7 @@ import "./MessageInput.css";
 import "./FriendsPanel.css";
 import "../pages/ProfilePage.css";
 import "../pages/Homepage.css";
+import "../pages/SettingsPage.css";
 import "./MainScreenPreview.css";
 
 const NAV_ITEMS = [
@@ -46,6 +47,11 @@ const MOCK_CHATS = [
   { id: "2", name: "Sam", time: "1h", preview: "See you later", selected: false, online: false, avatar: DEFAULT_AVATARS_GIRL[0] },
 ];
 
+const MOCK_FRIENDS = [
+  { id: "f1", name: "Johnny", avatar: DEFAULT_AVATARS_BOY[0], online: true },
+  { id: "f2", name: "Sam", avatar: DEFAULT_AVATARS_GIRL[0], online: false },
+];
+
 const MOCK_MESSAGES = [
   { id: "m1", text: "Hi", mine: false },
   { id: "m2", text: "Hey", mine: true, seenLabel: "Seen at 19:58 today" },
@@ -54,7 +60,7 @@ const MOCK_MESSAGES = [
 const SETTINGS_COLOR_ITEMS = [
   { key: "accent", label: "Accent" },
   { key: "appBg", label: "App bg" },
-  { key: "panelBg", label: "Panel (header, input)" },
+  { key: "panelBg", label: "Panel" },
   { key: "darkBg", label: "Sidebar" },
   { key: "bubbleMine", label: "My bubble" },
   { key: "bubbleOther", label: "Other bubble" },
@@ -62,10 +68,21 @@ const SETTINGS_COLOR_ITEMS = [
   { key: "textSecondary", label: "Text secondary" },
 ];
 
-const MainScreenPreview = ({ theme }) => {
+const DARK_BG_VALUES = ["#0f0f0f", "#000000", "#0a0a0a", "#111111", "#0d0d0d", "#141414"];
+
+const MainScreenPreview = ({ theme, isMobile }) => {
   const [activeNav, setActiveNav] = useState("all");
 
   if (!theme) return null;
+
+  const isDarkMode =
+    DARK_BG_VALUES.includes(theme.appBg) ||
+    DARK_BG_VALUES.includes(theme.pageBg) ||
+    DARK_BG_VALUES.includes(theme.chatBg);
+  const previewColorItems =
+    isDarkMode
+      ? SETTINGS_COLOR_ITEMS.filter(({ key }) => key === "accent" || key === "bubbleMine")
+      : SETTINGS_COLOR_ITEMS;
 
   const vars = {
     "--app-bg": theme.appBg,
@@ -83,13 +100,13 @@ const MainScreenPreview = ({ theme }) => {
   };
 
   return (
-    <div className="main-screen-preview" style={vars}>
+    <div className={`main-screen-preview ${isMobile ? "main-screen-preview--mobile" : ""}`} style={vars}>
       <div className="main-screen-preview__scale main-screen-preview__scale--interactive">
         <div className="app-shell h-screen w-screen flex main-screen-preview__shell">
-          <div className="flex flex-1 m-6 overflow-hidden app-card main-screen-preview__card">
-            {/* SIDEBAR - clickable nav */}
-            <div className="flex-shrink-0">
-              <aside className="sidebar-ref">
+          <div className={`flex flex-1 m-6 overflow-hidden app-card main-screen-preview__card ${isMobile ? "main-screen-preview__card--mobile" : ""}`}>
+            {/* SIDEBAR - clickable nav; on mobile shown at bottom */}
+            <div className={isMobile ? "app-card__sidebar flex-shrink-0" : "flex-shrink-0"}>
+              <aside className={`sidebar-ref ${isMobile ? "sidebar-ref--mobile" : ""}`}>
                 <div className="sidebar-ref__logo">
                   <div className="sidebar-ref__logo-wrap">
                     <img
@@ -137,11 +154,11 @@ const MainScreenPreview = ({ theme }) => {
               </aside>
             </div>
 
-            {/* Combined block: content changes by nav */}
-            <div className="app-content-wrap flex-1 flex min-w-0 main-screen-preview__content">
+            {/* Combined block: content changes by nav; on mobile "all" = only list full width */}
+            <div className={`app-content-wrap flex-1 flex min-w-0 main-screen-preview__content ${isMobile ? "app-card__main" : ""}`}>
               {activeNav === "all" && (
                 <>
-                  <div className="flex-shrink-0">
+                  <div className={isMobile ? "chat-list-panel-wrap flex-1 w-full min-w-0" : "flex-shrink-0"}>
                     <div className="chat-list-panel">
                       <div className="chat-list-panel__search">
                         <Search className="chat-list-panel__search-icon" size={18} />
@@ -184,6 +201,7 @@ const MainScreenPreview = ({ theme }) => {
                       </div>
                     </div>
                   </div>
+                  {!isMobile && (
                   <div className="flex-1 flex flex-col min-w-0">
                     <div className="chat-layout" style={{ minHeight: 0 }}>
                       <div className="flex-1 flex flex-col min-h-0">
@@ -232,50 +250,35 @@ const MainScreenPreview = ({ theme }) => {
                       </div>
                     </div>
                   </div>
+                  )}
                 </>
               )}
 
               {activeNav === "friends" && (
                 <div className="friends-panel main-screen-preview__friends">
-                  <h1 className="friends-panel__title">Friends</h1>
+                  <div className="friends-panel__tabs">
+                    <button type="button" className="friends-panel__tab friends-panel__tab--active">List</button>
+                    <button type="button" className="friends-panel__tab">Requests</button>
+                  </div>
                   <div className="friends-panel__search">
                     <Search className="friends-panel__search-icon" size={18} />
                     <input type="text" placeholder="Search friends" readOnly className="friends-panel__search-input" />
                   </div>
                   <div className="friends-panel__sort">
-                    <button type="button" className="friends-panel__sort-btn friends-panel__sort-btn--active">
-                      <Calendar size={16} />
-                      <span>Date added</span>
-                    </button>
-                    <button type="button" className="friends-panel__sort-btn">
-                      <ArrowDownAZ size={16} />
-                      <span>A–Z</span>
-                    </button>
+                    <button type="button" className="friends-panel__sort-btn friends-panel__sort-btn--active">Date added</button>
+                    <button type="button" className="friends-panel__sort-btn">A–Z</button>
                   </div>
-                  <div className="friends-panel__list">
-                    <div className="friends-panel__item-wrap">
-                      <button type="button" className="friends-panel__item">
-                        <div className="friends-panel__avatar-wrap">
-                          <img src={DEFAULT_AVATARS_BOY[0]} alt="Johnny" className="friends-panel__avatar" />
-                          <span className="friends-panel__online" />
+                  <div className="friends-panel__grid">
+                    {MOCK_FRIENDS.map((friend) => (
+                      <div key={friend.id} className="friends-panel__card">
+                        <div className="friends-panel__card-btn">
+                          <div className="friends-panel__card-avatar-wrap">
+                            <img src={friend.avatar || DEFAULT_AVATAR_URL} alt={friend.name} className="friends-panel__card-avatar" />
+                          </div>
+                          <span className="friends-panel__card-name">{friend.name}</span>
                         </div>
-                        <div className="friends-panel__body">
-                          <span className="friends-panel__name">Johnny</span>
-                        </div>
-                      </button>
-                      <button type="button" className="friends-panel__remove" aria-hidden><UserMinus size={14} strokeWidth={2.25} /><span>Remove</span></button>
-                    </div>
-                    <div className="friends-panel__item-wrap">
-                      <button type="button" className="friends-panel__item">
-                        <div className="friends-panel__avatar-wrap">
-                          <img src={DEFAULT_AVATARS_GIRL[0]} alt="Sam" className="friends-panel__avatar" />
-                        </div>
-                        <div className="friends-panel__body">
-                          <span className="friends-panel__name">Sam</span>
-                        </div>
-                      </button>
-                      <button type="button" className="friends-panel__remove" aria-hidden><UserMinus size={14} strokeWidth={2.25} /><span>Remove</span></button>
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -302,19 +305,19 @@ const MainScreenPreview = ({ theme }) => {
                           </div>
                           <div className="profile-fields-grid">
                             <div className="profile-field-item">
-                              <label className="profile-field-label">First Name</label>
+                              <label className="profile-field-label">FIRST NAME</label>
                               <div className="profile-field-value">Chintu</div>
                             </div>
                             <div className="profile-field-item">
-                              <label className="profile-field-label">Last Name</label>
+                              <label className="profile-field-label">LAST NAME</label>
                               <div className="profile-field-value">Jiya</div>
                             </div>
                             <div className="profile-field-item">
-                              <label className="profile-field-label">Email Address</label>
+                              <label className="profile-field-label">EMAIL ADDRESS</label>
                               <div className="profile-field-value profile-field-value--readonly">chintu@gmail.com</div>
                             </div>
                             <div className="profile-field-item">
-                              <label className="profile-field-label">Gender</label>
+                              <label className="profile-field-label">GENDER</label>
                               <div className="profile-field-value">Male</div>
                             </div>
                           </div>
@@ -324,7 +327,7 @@ const MainScreenPreview = ({ theme }) => {
                   </div>
                   <div className="profile-content-wrap__spacer" aria-hidden />
                   <div className="profile-user-id">
-                    <span className="profile-user-id__label">Your User ID</span>
+                    <span className="profile-user-id__label">YOUR USER ID</span>
                     <div className="profile-user-id__row">
                       <code className="profile-user-id__code">2NTVM1</code>
                       <button type="button" className="profile-user-id__share" aria-hidden><Share2 size={20} /></button>
@@ -336,26 +339,37 @@ const MainScreenPreview = ({ theme }) => {
 
               {activeNav === "edit" && (
                 <div className="main-screen-preview__settings">
-                  <div className="main-screen-preview__settings-actions">
-                    <button type="button" className="main-screen-preview__settings-btn main-screen-preview__settings-btn--reset" disabled>Reset to default</button>
-                    <button type="button" className="main-screen-preview__settings-btn main-screen-preview__settings-btn--cancel" disabled>Cancel</button>
-                    <button type="button" className="main-screen-preview__settings-btn main-screen-preview__settings-btn--save" disabled>Save changes</button>
-                  </div>
-                  <div className="main-screen-preview__settings-colors">
-                    {SETTINGS_COLOR_ITEMS.map(({ key, label }) => {
-                      const value = key === "darkBg" ? (theme.darkBg != null ? theme.darkBg : "#000000") : key === "panelBg" ? (theme.panelBg ?? "#ffffff") : (theme[key] ?? "");
-                      return (
-                        <div key={key} className="main-screen-preview__settings-color-card">
-                          <span className="main-screen-preview__settings-swatch" style={{ background: value }} />
-                          <span className="main-screen-preview__settings-color-label">{label}</span>
+                  <div className="main-screen-preview__settings-scale-wrap">
+                  <div className="main-screen-preview__settings-scale">
+                    <div className="settings-appearance-block">
+                      <div className="settings-appearance-row">
+                        <div className="settings-preview-block" aria-hidden />
+                        <div className="settings-colors-cards">
+                          <div className="settings-theme-actions">
+                            <button type="button" className="settings-action-btn settings-action-btn--reset" disabled>Reset</button>
+                            <button type="button" className="settings-action-btn settings-action-btn--cancel" disabled>Cancel</button>
+                            <button type="button" className="settings-action-btn settings-action-btn--save" disabled>Save</button>
+                          </div>
+                          <div className="theme-cards-grid">
+                            {previewColorItems.map(({ key, label }) => {
+                              const value = key === "darkBg" ? (theme.darkBg != null ? theme.darkBg : "#000000") : key === "panelBg" ? (theme.panelBg ?? "#ffffff") : (theme[key] ?? "");
+                              return (
+                                <div key={key} className="theme-color-card">
+                                  <span className="theme-color-card__swatch" style={{ background: value }} />
+                                  <span className="theme-color-card__label">{label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="settings-danger-zone">
+                            <h3>Delete account</h3>
+                            <p>Permanently delete your account and data. This cannot be undone.</p>
+                            <button type="button" className="settings-delete-btn" disabled>Delete my account</button>
+                          </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    </div>
                   </div>
-                  <div className="main-screen-preview__settings-danger">
-                    <h3 className="main-screen-preview__settings-danger-title">Delete account</h3>
-                    <p className="main-screen-preview__settings-danger-desc">Permanently delete your account and data. This cannot be undone.</p>
-                    <button type="button" className="main-screen-preview__settings-delete-btn" disabled>Delete my account</button>
                   </div>
                 </div>
               )}

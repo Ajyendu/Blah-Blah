@@ -3,6 +3,7 @@ import { emitToUser } from "../lib/socket.js";
 import Message from "../models/message.model.js";
 import RejectedRequest from "../models/rejectedRequest.model.js";
 import mongoose from "mongoose";
+import { decrypt } from "../lib/encryption.js";
 
 export const acceptChat = async (req, res) => {
   const userId = req.user._id;
@@ -128,6 +129,7 @@ export const getMyChats = async (req, res) => {
   })
     .populate("participants", "fullName profilePic userCode")
     .sort({ updatedAt: -1 })
+    .limit(50)
     .lean();
 
   const normalized = await Promise.all(
@@ -149,6 +151,13 @@ export const getMyChats = async (req, res) => {
           (id) => id && String(id) === String(userId),
         );
         if (deletedForMe) lastMessage = null;
+      }
+      if (lastMessage) {
+        lastMessage = {
+          ...lastMessage,
+          text: lastMessage.text != null ? decrypt(lastMessage.text) : lastMessage.text,
+          fileName: lastMessage.fileName != null && lastMessage.fileName !== "" ? decrypt(lastMessage.fileName) : lastMessage.fileName,
+        };
       }
       return {
         ...doc,
@@ -187,6 +196,7 @@ export const getMyFriends = async (req, res) => {
   })
     .populate("participants", "fullName profilePic userCode")
     .sort({ updatedAt: -1 })
+    .limit(200)
     .lean();
 
   res.json(chats);

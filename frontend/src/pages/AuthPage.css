@@ -1,7 +1,7 @@
 /* Auth pages: card layout matching reference (Mofitask-style) */
 .auth-page {
   min-height: 100vh;
-  background: #fff0f0;
+  background: var(--auth-illus-bg, #fff0f0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,7 +13,7 @@
 .auth-page__logo {
   position: fixed;
   top: 0;
-  left: 0;
+  left: 10px;
   z-index: 50;
   padding: 1rem 1.25rem;
   display: block;
@@ -33,7 +33,7 @@
   max-width: 1100px;
   height: 620px;
   min-height: 620px;
-  background: #fff;
+  background: var(--auth-illus-bg, #ffffff);
   border-radius: 20px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12);
   overflow: hidden;
@@ -56,9 +56,8 @@
   }
 }
 
-/* Left panel: image with white above and below */
+/* Left panel: illustration area – white in bright mode, dark in dark mode (via --auth-illus-bg) */
 .auth-card__left {
-  background: #fff;
   padding: 0;
   position: relative;
   overflow: hidden;
@@ -100,6 +99,7 @@
   object-fit: contain;
   object-position: center;
   display: block;
+  background-color: var(--auth-illus-bg, #ffffff);
 }
 
 /* Right panel: form (white, clean) - form vertically centered */
@@ -108,7 +108,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: #fff;
+  background: var(--auth-illus-bg, #fff0f0);
   position: relative;
   overflow-y: auto;
   min-height: 0;
@@ -144,7 +144,7 @@
 .auth-card__title {
   font-size: 1.875rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary, #1e293b);
   text-align: center;
   margin-top: 0;
   margin-bottom: 1.5rem;
@@ -192,7 +192,7 @@
 .auth-form__label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary, #1e293b);
 }
 
 .auth-form__input-wrap {
@@ -219,7 +219,7 @@
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #fafafa;
-  color: #1e293b;
+  color: var(--text-primary, #1e293b);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
@@ -228,7 +228,7 @@
 }
 .auth-form__input:focus {
   border-color: #ef4444;
-  background: #fff;
+  background: #1e293b;
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 

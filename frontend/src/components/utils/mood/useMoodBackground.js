@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "../../../store/useAuthStore";
+import { useThemeStore } from "../../../store/useThemeStore";
 
 /* ================= EMOTION CONFIG ================= */
 const EMOTIONS = {
@@ -385,13 +386,18 @@ function smoothStep(current, target, alpha) {
   return current + (target - current) * alpha;
 }
 
-function applyInertialMood(target, intensity, chatId) {
+function applyInertialMood(target, intensity, chatId, isDarkMode, darkChatBg) {
   const key = chatId ?? "_global";
   if (!moodByChatId[key]) {
     moodByChatId[key] = { ...DEFAULT_NEUTRAL };
   }
-  const current = moodByChatId[key];
 
+  if (isDarkMode && darkChatBg) {
+    document.documentElement.style.setProperty("--chat-mood-bg", darkChatBg);
+    return;
+  }
+
+  const current = moodByChatId[key];
   const alpha = 0.06 + intensity * 0.14;
 
   current.r = smoothStep(current.r, target.r, alpha);
@@ -402,9 +408,13 @@ function applyInertialMood(target, intensity, chatId) {
   document.documentElement.style.setProperty("--chat-mood-bg", value);
 }
 
-function resetMoodToTheme(chatId) {
+function resetMoodToTheme(chatId, isDarkMode, darkChatBg) {
   const key = chatId ?? "_global";
   delete moodByChatId[key];
+  if (isDarkMode && darkChatBg) {
+    document.documentElement.style.setProperty("--chat-mood-bg", darkChatBg);
+    return;
+  }
   const themeBg = getComputedStyle(document.documentElement).getPropertyValue("--chat-bg").trim();
   if (themeBg) {
     document.documentElement.style.setProperty("--chat-mood-bg", themeBg);
@@ -440,25 +450,35 @@ function getRecentMessages(messages, myId) {
 /* ================= HOOK ================= */
 
 export function useMoodBackground(messages, myId, chatId) {
+  const theme = useThemeStore((s) => s.theme);
+  const isDarkMode =
+    theme?.chatBg === "#0f0f0f" ||
+    theme?.chatBg === "#000000" ||
+    theme?.chatBg === "#0a0a0a" ||
+    theme?.pageBg === "#0f0f0f" ||
+    theme?.pageBg === "#000000" ||
+    theme?.pageBg === "#0a0a0a";
+  const darkChatBg = isDarkMode ? (theme?.chatBg ?? "#0a0a0a") : null;
+
   useEffect(() => {
     if (!Array.isArray(messages) || messages.length === 0 || myId == null) {
-      resetMoodToTheme(chatId);
+      resetMoodToTheme(chatId, isDarkMode, darkChatBg);
       return;
     }
 
     const recent = getRecentMessages(messages, myId);
     if (recent.length === 0) {
-      resetMoodToTheme(chatId);
+      resetMoodToTheme(chatId, isDarkMode, darkChatBg);
       return;
     }
 
     const result = analyzeEmotionMix(recent);
     if (!result) {
-      resetMoodToTheme(chatId);
+      resetMoodToTheme(chatId, isDarkMode, darkChatBg);
       return;
     }
 
     const target = blendEmotionColorsToRGB(result.mix);
-    applyInertialMood(target, result.intensity, chatId);
-  }, [messages, myId, chatId]);
+    applyInertialMood(target, result.intensity, chatId, isDarkMode, darkChatBg);
+  }, [messages, myId, chatId, isDarkMode, darkChatBg]);
 }
