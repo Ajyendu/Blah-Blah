@@ -73,7 +73,7 @@ export const useChatStore = create((set, get) => ({
       const id =
         conversationId != null
           ? typeof conversationId === "object" && conversationId?.toString
-            ? conversationId.toString()
+              ? conversationId.toString()
             : String(conversationId)
           : null;
       if (!id) {
@@ -253,8 +253,8 @@ export const useChatStore = create((set, get) => ({
 
     set({ isMessagesLoading: true });
     try {
-      const res = await axiosInstance.get(
-        `/messages/conversation/${conversationId}`,
+    const res = await axiosInstance.get(
+      `/messages/conversation/${conversationId}`,
         { params: { limit: 50 } },
       );
 
@@ -270,27 +270,27 @@ export const useChatStore = create((set, get) => ({
 
       const lastInChat =
         messageList.length > 0 ? messageList[messageList.length - 1] : null;
-      set((state) => ({
-        chats: state.chats.map((c) =>
-          String(c._id) === String(conversationId)
-            ? { ...c, lastMessage: lastInChat }
-            : c,
-        ),
-      }));
+    set((state) => ({
+      chats: state.chats.map((c) =>
+        String(c._id) === String(conversationId)
+          ? { ...c, lastMessage: lastInChat }
+          : c,
+      ),
+    }));
 
-      // Mark as seen only when tab is visible to the user
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState !== "visible"
-      )
-        return;
-      const authUser = useAuthStore.getState().authUser;
-      const socket = useAuthStore.getState().socket;
-      if (authUser?._id && socket) {
-        socket.emit("chat_opened", {
-          chatId: conversationId,
-          userId: authUser._id,
-        });
+    // Mark as seen only when tab is visible to the user
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState !== "visible"
+    )
+      return;
+    const authUser = useAuthStore.getState().authUser;
+    const socket = useAuthStore.getState().socket;
+    if (authUser?._id && socket) {
+      socket.emit("chat_opened", {
+        chatId: conversationId,
+        userId: authUser._id,
+      });
       }
     } catch (err) {
       set({ messages: [], isMessagesLoading: false });

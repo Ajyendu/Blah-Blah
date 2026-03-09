@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
-import { useAudioCall } from "../store/useAudioCall";
 import IncomingCallModal from "./IncomingCallModal";
 import { ringtone } from "./utils/ringtone";
 import { useAuthStore } from "../store/useAuthStore";
 import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
 
-function CallListener({ setActiveCallUserId, setCallActive, setCallType }) {
+function CallListener({ setActiveCallUserId, setCallActive, setCallType, answerCall, setActiveCallUserName, setActiveCallUserAvatar }) {
   const socket = useAuthStore((s) => s.socket);
-  const { answerCall } = useAudioCall();
-  const [activeCallUserName, setActiveCallUserName] = useState("");
-  const [activeCallUserAvatar, setActiveCallUserAvatar] = useState(null);
   const [incoming, setIncoming] = useState(null);
 
   useEffect(() => {
     if (!socket) return;
     socket.on("incoming-call", (data) => {
+      try {
+        ringtone.currentTime = 0;
+        ringtone.volume = 1;
+        ringtone.play().catch(() => {});
+      } catch {
+        // ignore autoplay errors
+      }
       setCallType(data.callType);
       setActiveCallUserId(data.from);
       setIncoming(data);
@@ -47,14 +50,18 @@ function CallListener({ setActiveCallUserId, setCallActive, setCallType }) {
         }}
         onAccept={async () => {
           // Show call card + timer immediately; connect in background
+          ringtone.pause();
+          ringtone.currentTime = 0;
           setCallActive(true);
           setActiveCallUserId(incoming.from);
-          setActiveCallUserName(incoming.name);
-          setActiveCallUserAvatar(incoming.avatar);
+          setActiveCallUserName(incoming.name ?? incoming.from);
+          setActiveCallUserAvatar(incoming.avatar || DEFAULT_AVATAR_URL);
           setIncoming(null);
           await answerCall(incoming);
         }}
         onReject={() => {
+          ringtone.pause();
+          ringtone.currentTime = 0;
           socket.emit("end-call", { to: String(incoming.from) });
           setIncoming(null);
         }}

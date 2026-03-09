@@ -171,6 +171,38 @@
   border: none;
 }
 
+/* When jumping from a note: tiny horizontal nudge then back */
+.msg-bubble-ref--jump-mine {
+  animation: msg-bubble-jump-mine 260ms ease-out;
+}
+.msg-bubble-ref--jump-theirs {
+  animation: msg-bubble-jump-theirs 260ms ease-out;
+}
+
+@keyframes msg-bubble-jump-mine {
+  0% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(-8px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes msg-bubble-jump-theirs {
+  0% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(8px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
 /* Message saved as note: black background, white text in chatbox */
 .msg-bubble-ref--note.msg-bubble-ref--mine,
 .msg-bubble-ref--note.msg-bubble-ref--theirs {

@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
-import { useAudioCall } from "../store/useAudioCall";
 import { useNoteStore } from "../store/useNoteStore";
 import { useGameStore } from "../store/useGameStore";
 import { useIsMobile } from "../hooks/useMediaQuery";
@@ -28,6 +27,7 @@ const ChatHeader = ({
   setActiveCallUserId,
   setActiveCallUserName,
   setActiveCallUserAvatar,
+  startCall,
 }) => {
   const {
     selectedUser,
@@ -37,7 +37,6 @@ const ChatHeader = ({
     rejectedChatId,
   } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
-  const { startCall } = useAudioCall();
   const {
     isNotesOpen,
     setIsNotesOpen,
@@ -94,7 +93,9 @@ const ChatHeader = ({
   const featuresDisabled = isPendingChat || showRejected;
 
   const handleVideo = () => {
-    startCall(selectedUser._id, "video");
+    if (typeof startCall === "function") {
+      startCall(selectedUser._id, "video");
+    }
     setCallType("video");
     setCalling(true);
     setActiveCallUserId(selectedUser._id);
@@ -103,7 +104,9 @@ const ChatHeader = ({
   };
 
   const handleAudio = () => {
-    startCall(selectedUser._id, "audio");
+    if (typeof startCall === "function") {
+      startCall(selectedUser._id, "audio");
+    }
     setCallType("audio");
     setCalling(true);
     setActiveCallUserId(selectedUser._id);

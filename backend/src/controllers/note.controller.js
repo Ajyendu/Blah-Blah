@@ -1,5 +1,6 @@
 import ChatNote from "../models/chatNote.model.js";
 import Message from "../models/message.model.js";
+import { encrypt, decrypt } from "../lib/encryption.js";
 
 /* ⭐ TOGGLE IMPORTANT */
 // export const searchNote = async (req, res) => {
@@ -60,7 +61,13 @@ export const toggleNote = async (req, res) => {
     }
 
     let preview = "";
-    if (msg.text?.trim()) preview = msg.text.slice(0, 120);
+    let text = msg.text;
+
+    if (text?.startsWith("enc:")) {
+      text = decrypt(text); // decrypt first
+    }
+
+    if (text?.trim()) preview = text.slice(0, 120);
     else if (msg.image) preview = "📷 Image";
     else preview = "Message";
 

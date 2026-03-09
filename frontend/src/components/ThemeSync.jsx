@@ -60,6 +60,18 @@ const ThemeSync = () => {
     root.style.setProperty("--profile-decorative-border", theme.profileDecorativeBorder ?? "#ffffff");
     /* Auth left panel (illustration area): white in bright mode, dark in dark mode */
     root.style.setProperty("--auth-illus-bg", theme.appBg ?? "#ffffff");
+
+    /* Panel outlines + chat input background:
+       - In bright mode: white panels and input bar on white background
+       - In dark mode: black panels and input bar so they blend with dark shell */
+    root.style.setProperty(
+      "--panel-strong-border",
+      isDark ? "#000000" : "#ffffff",
+    );
+    root.style.setProperty(
+      "--chat-input-bg",
+      isDark ? "#000000" : "#ffffff",
+    );
   }, [theme]);
 
   return null;

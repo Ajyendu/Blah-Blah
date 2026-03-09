@@ -257,6 +257,15 @@ const ChatDrawing = () => {
     }
   }, []);
 
+  // When theme/background changes, immediately repaint the canvas with the new
+  // background colour and all existing strokes so the drawing screen matches
+  // bright/dark mode the moment it is toggled.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !canvas.width || !canvas.height) return;
+    redrawCanvas();
+  }, [canvasBg, redrawCanvas]);
+
   useEffect(() => {
     saveStateRef.current = pushStrokeToHistory;
     return () => { saveStateRef.current = null; };
@@ -432,6 +441,13 @@ const ChatDrawing = () => {
       if (!parent) return;
       const w = Math.max(1, parent.clientWidth);
       const h = Math.max(1, parent.clientHeight);
+
+      // When the bottom sheet is minimized on mobile, the parent height becomes
+      // very small. Resizing the canvas at those tiny sizes causes the drawing
+      // to be repeatedly cropped. Skip resize while the visible height is tiny
+      // and keep the previous full canvas; it will be redrawn once the sheet
+      // is expanded again.
+      if (h < 220) return;
 
       if (w === lastSizeRef.current.w && h === lastSizeRef.current.h) return;
       lastSizeRef.current = { w, h };

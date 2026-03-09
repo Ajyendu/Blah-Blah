@@ -4,7 +4,6 @@ import { Search, MessageCircle, UserMinus, Phone, Video } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { useAudioCall } from "../store/useAudioCall";
 import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
 import "../components/FriendsPanel.css";
 import "./Homepage.css";
@@ -20,9 +19,9 @@ const FriendsPage = ({
   setActiveCallUserId,
   setActiveCallUserName,
   setActiveCallUserAvatar,
+  startCall,
 }) => {
   const navigate = useNavigate();
-  const { startCall } = useAudioCall();
   const {
     getMyChats,
     getMyFriends,

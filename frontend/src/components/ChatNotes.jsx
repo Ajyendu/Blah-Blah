@@ -10,10 +10,24 @@ window.jumpToMessage = (id) => {
   const el = document.getElementById(`msg-${id}`);
   if (!el) return;
 
+  // Scroll target message into view
   el.scrollIntoView({ behavior: "smooth", block: "center" });
-  el.classList.add("msg-bubble-ref--jump");
 
-  setTimeout(() => el.classList.remove("msg-bubble-ref--jump"), 700);
+  // Nudge direction based on who sent the message
+  const isMine = el.classList.contains("msg-bubble-ref--mine");
+  const jumpClass = isMine
+    ? "msg-bubble-ref--jump-mine"
+    : "msg-bubble-ref--jump-theirs";
+
+  el.classList.remove("msg-bubble-ref--jump-mine", "msg-bubble-ref--jump-theirs");
+  // Small delay so repeated clicks retrigger the animation
+  requestAnimationFrame(() => {
+    el.classList.add(jumpClass);
+    setTimeout(
+      () => el.classList.remove(jumpClass),
+      400,
+    );
+  });
 };
 
 const ChatNotes = () => {

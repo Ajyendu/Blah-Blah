@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { X, GripVertical, Search, Link, Upload, Play, Pause, SkipBack, SkipForward, Trash2 } from "lucide-react";
+import { X, GripVertical, Link, Upload, Play, Pause, SkipBack, SkipForward, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNoteStore } from "../store/useNoteStore";
 import { useChatStore } from "../store/useChatStore";
@@ -63,7 +63,6 @@ const ChatVideoPanel = () => {
   const [source, setSource] = useState("youtube"); // "youtube" | "local"
   const [localPlaybackMode, setLocalPlaybackMode] = useState("stream"); // "stream" | "upload"
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [localFile, setLocalFile] = useState(null);
   const [localObjectUrl, setLocalObjectUrl] = useState("");
   const resizeStartX = useRef(0);
@@ -194,13 +193,6 @@ const ChatVideoPanel = () => {
     }, 400);
     return () => clearTimeout(t);
   }, [source, chatIdStr, otherParticipant, socket, youtubeUrl]);
-
-  const handleSearch = () => {
-    const q = searchQuery.trim();
-    if (!q) return;
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
 
   const handlePasteFromClipboard = async () => {
     try {
@@ -724,26 +716,7 @@ const ChatVideoPanel = () => {
 
         {source === "youtube" && (
           <div className="chat-video-panel__youtube-controls">
-            {youtubeId && (
-              <div className="chat-video-panel__info">
-                <span className="chat-video-panel__info-title">YouTube</span>
-                <span className="chat-video-panel__info-sub">Video playing</span>
-              </div>
-            )}
             <div className="chat-video-panel__controls">
-              <div className="chat-video-panel__search-row">
-                <span className="chat-video-panel__search-icon-wrap" aria-hidden>
-                  <Search size={20} strokeWidth={2.5} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search on Youtube"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="chat-video-panel__input chat-video-panel__search-input"
-                />
-              </div>
               <div className="chat-video-panel__url-row">
                 <button
                   type="button"
@@ -791,11 +764,6 @@ const ChatVideoPanel = () => {
                 </button>
               </div>
             </div>
-            <p className="chat-video-panel__file-hint">
-              {localPlaybackMode === "stream"
-                ? "Stream: loads as you watch, any file size."
-                : `Upload: full load, keep under ${MAX_VIDEO_SIZE_MB} MB.`}
-            </p>
             <label className="chat-video-panel__file-row">
               <span className="chat-video-panel__file-icon-wrap" aria-hidden>
                 <Upload size={20} strokeWidth={2.5} />

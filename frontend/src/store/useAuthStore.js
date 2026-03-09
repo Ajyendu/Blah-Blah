@@ -5,6 +5,7 @@ import { io } from "socket.io-client";
 import { useChatStore } from "./useChatStore.js";
 import { useNoteStore } from "./useNoteStore.js";
 import { useGameStore } from "./useGameStore.js";
+import { useThemeStore } from "./useThemeStore.js";
 
 function closeAllPanels() {
   useNoteStore.getState().setIsNotesOpen(false);
@@ -68,6 +69,8 @@ export const useAuthStore = create((set, get) => ({
       });
 
       set({ authUser: res.data });
+      // Hydrate per-account theme (bright by default) from server
+      useThemeStore.getState().hydrateFromAccountTheme(res.data.theme);
       closeAllPanels();
       get().connectSocket();
     } catch (error) {
@@ -91,6 +94,7 @@ export const useAuthStore = create((set, get) => ({
         `Bearer ${token}`;
 
       set({ authUser: user, token });
+      useThemeStore.getState().hydrateFromAccountTheme(user.theme);
       closeAllPanels();
       toast.success("Account created successfully");
 
@@ -123,6 +127,7 @@ export const useAuthStore = create((set, get) => ({
         `Bearer ${token}`;
 
       set({ authUser: user, token });
+      useThemeStore.getState().hydrateFromAccountTheme(user.theme);
       closeAllPanels();
       toast.success("Logged in successfully");
 

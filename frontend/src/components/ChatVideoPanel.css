@@ -166,6 +166,8 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  margin-top: 0;
+  margin-bottom: 8px;
 }
 
 .chat-video-panel__player-zone .chat-video-panel__player-wrap,
@@ -227,7 +229,7 @@
 /* Bottom bar (Lyrics-style) - no grey background */
 .chat-video-panel__controls {
   flex-shrink: 0;
-  margin-top: auto;
+  margin-top: 8px;
   padding: 12px 10px 14px;
   background: transparent;
   border-radius: 16px 16px 0 0;

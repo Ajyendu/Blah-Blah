@@ -34,7 +34,7 @@ function PageLoader() {
 
 const App = () => {
   const location = useLocation();
-  const { endCall } = useAudioCall();
+  const { startCall, answerCall, endCall, isMuted, toggleMute } = useAudioCall();
   const socket = useAuthStore((s) => s.socket);
   const [callType, setCallType] = useState(null);
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
@@ -163,8 +163,8 @@ const App = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Decorative image: click → dark/light mode – hidden on mobile */}
-      {!isMobile && (
+      {/* Decorative image: click → dark/light mode – hidden on mobile and on auth pages */}
+      {!isMobile && location.pathname !== "/login" && location.pathname !== "/signup" && (
         <div
           className="app-string-decoration"
           role="button"
@@ -219,6 +219,7 @@ const App = () => {
         setActiveCallUserAvatar={setActiveCallUserAvatar}
         setCallActive={setCallActive}
         setCallType={setCallType}
+        answerCall={answerCall}
       />
 
       {callActive && !calling && callType === "audio" && (
@@ -227,6 +228,9 @@ const App = () => {
           avatar={activeCallUserAvatar} // 🔥 RECEIVER DP
           name={activeCallUserName}
           callActive={callActive}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+          onEndCall={endCall}
         />
       )}
 
@@ -236,6 +240,9 @@ const App = () => {
           activeCallUserName={activeCallUserName}
           activeCallUserAvatar={activeCallUserAvatar}
           callActive={callActive}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+          onEndCall={endCall}
         />
       )}
 
@@ -259,6 +266,7 @@ const App = () => {
                 setActiveCallUserId={setActiveCallUserId}
                 setActiveCallUserName={setActiveCallUserName}
                 setActiveCallUserAvatar={setActiveCallUserAvatar}
+                startCall={startCall}
               />
             ) : (
               <Navigate to="/login" />
@@ -308,6 +316,7 @@ const App = () => {
                   setActiveCallUserId={setActiveCallUserId}
                   setActiveCallUserName={setActiveCallUserName}
                   setActiveCallUserAvatar={setActiveCallUserAvatar}
+                  startCall={startCall}
                 />
               </Suspense>
             ) : (

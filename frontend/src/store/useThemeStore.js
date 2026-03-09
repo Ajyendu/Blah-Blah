@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { axiosInstance } from "../lib/axios.js";
 
 /** Bright/light mode: white backgrounds */
 const DEFAULT_THEME = {
@@ -74,7 +75,8 @@ const DARK_THEME = {
   contentBorder: "transparent",
   surfaceBorderOnDark: "#525252",
   panelDivider: "transparent",
-  noteMineBg: "#404040",
+  // Notes from me should match my chat bubble colour even in dark mode
+  noteMineBg: DEFAULT_THEME.noteMineBg,
   profileCardBorder: "transparent",
   profileAvatarRing: "transparent",
   profileDecorativeBorder: "transparent",
@@ -111,6 +113,14 @@ const loadBackup = () => {
   return null;
 };
 
+const persistThemeToServer = async (theme) => {
+  try {
+    await axiosInstance.put("/auth/update-profile", { theme });
+  } catch (_) {
+    // Ignore network errors; theme will still be applied locally
+  }
+};
+
 export const useThemeStore = create((set, get) => ({
   theme: loadTheme(),
   /** Draft theme while editing in Settings; applied on Save */
@@ -139,6 +149,8 @@ export const useThemeStore = create((set, get) => ({
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       } catch (_) {}
+      // Fire and forget: persist per-account theme on the backend
+      persistThemeToServer(next);
       return { theme: next };
     }),
 
@@ -157,6 +169,7 @@ export const useThemeStore = create((set, get) => ({
       localStorage.setItem(STORAGE_KEY, JSON.stringify(draftTheme));
     } catch (_) {}
     set({ theme: draftTheme });
+    persistThemeToServer(draftTheme);
   },
 
   /** Restore draft from last saved theme (e.g. undo reset without saving) */
@@ -187,7 +200,9 @@ export const useThemeStore = create((set, get) => ({
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_THEME));
     } catch (_) {}
-    set({ theme: { ...DEFAULT_THEME } });
+    const next = { ...DEFAULT_THEME };
+    set({ theme: next });
+    persistThemeToServer(next);
   },
 
   /** Apply dark or light preset (used by string decoration: 50% = dark, 30% = light) */
@@ -197,5 +212,17 @@ export const useThemeStore = create((set, get) => ({
       localStorage.setItem(STORAGE_KEY, JSON.stringify(theme));
     } catch (_) {}
     set({ theme });
+    persistThemeToServer(theme);
+  },
+
+  /** Hydrate theme from account data on login/checkAuth; bright mode by default */
+  hydrateFromAccountTheme: (serverTheme) => {
+    const next = serverTheme
+      ? { ...DEFAULT_THEME, ...serverTheme }
+      : { ...DEFAULT_THEME };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch (_) {}
+    set({ theme: next });
   },
 }));

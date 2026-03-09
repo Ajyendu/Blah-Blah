@@ -130,6 +130,7 @@
   margin-top: 0.5rem;
   box-shadow: 0 4px 14px rgba(232, 121, 160, 0.35);
 }
+
 .new-chat-modal__submit:hover:not(:disabled) {
   opacity: 0.95;
   background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);

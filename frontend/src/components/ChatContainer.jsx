@@ -50,6 +50,7 @@ const ChatContainer = ({
   setActiveCallUserName,
   setActiveCallUserAvatar,
   setCalling,
+  startCall,
 }) => {
   const {
     isScreenSharing,
@@ -358,6 +359,7 @@ const ChatContainer = ({
         setActiveCallUserId={setActiveCallUserId}
         setActiveCallUserName={setActiveCallUserName}
         setActiveCallUserAvatar={setActiveCallUserAvatar}
+        startCall={startCall}
       />
 
       <div

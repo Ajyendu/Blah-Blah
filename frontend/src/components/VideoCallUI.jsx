@@ -5,6 +5,9 @@ const VideoCallUI = ({
   activeCallUserName,
   activeCallUserAvatar,
   callActive,
+  isMuted,
+  onToggleMute,
+  onEndCall,
 }) => {
   return (
     <div style={overlay}>
@@ -21,6 +24,9 @@ const VideoCallUI = ({
           name={activeCallUserName}
           avatar={activeCallUserAvatar}
           callActive={callActive}
+          isMuted={isMuted}
+          onToggleMute={onToggleMute}
+          onEndCall={onEndCall}
         />
       </div>
     </div>

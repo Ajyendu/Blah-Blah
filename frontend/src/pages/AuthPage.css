@@ -1,12 +1,18 @@
 /* Auth pages: card layout matching reference (Mofitask-style) */
 .auth-page {
   min-height: 100vh;
-  background: var(--auth-illus-bg, #fff0f0);
+  background: #fff0f0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
   position: relative;
+  /* Force light theme variables inside auth pages regardless of global theme */
+  --page-bg: #ffffff;
+  --app-bg: #ffffff;
+  --auth-illus-bg: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #6b7280;
 }
 
 /* Logo at top-left of the whole window */
@@ -26,6 +32,106 @@
   max-width: 280px;
   object-fit: contain;
   display: block;
+}
+
+/* Mobile tweaks: smaller floating logo, larger hero image aligned with form width */
+@media (max-width: 768px) {
+  /* Use full viewport, center card, and prevent scrolling */
+  .auth-page {
+    height: 100vh;
+    min-height: 100vh;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* Shrink entire auth card on mobile so everything fits without scroll */
+  .auth-card {
+    transform: scale(0.8);
+    transform-origin: center center;
+  }
+
+  .auth-page__logo {
+    left: 0;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .auth-page__logo-img {
+    height: 2.2rem;
+    max-width: 130px;
+  }
+
+  .auth-card__left {
+    min-height: 260px;
+    padding: 4rem 1.5rem 0; /* push illustration block even further down */
+  }
+
+  .auth-card__illus {
+    position: static;
+    width: 100%;
+    height: auto;
+  }
+
+  .auth-card__illus-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    transform: scale(1.5);
+    transform-origin: center;
+    margin-top: 2.5rem; /* nudge illustration even further downward */
+  }
+
+  /* More compact, minimal form on small screens (signup/login) */
+  .auth-card__right {
+    padding: 0.5rem 0.75rem 0.75rem;
+    overflow-y: visible;
+  }
+
+  .auth-card__title {
+    font-size: 1.25rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .auth-form {
+    gap: 0.4rem;
+  }
+
+  .auth-form__row {
+    gap: 0.4rem;
+  }
+
+  .auth-form__group {
+    gap: 0.15rem;
+  }
+
+  .auth-form__label {
+    font-size: 0.75rem;
+  }
+
+  .auth-form__input {
+    padding: 4px 7px 4px 30px;
+    font-size: 0.75rem;
+  }
+
+  .auth-form__radios {
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .auth-form__radio-label {
+    padding: 3px 7px;
+    font-size: 0.75rem;
+  }
+
+  .auth-form__submit {
+    padding: 8px 12px;
+    margin-top: 0.05rem;
+    font-size: 0.9rem;
+  }
+
+  .auth-form__footer {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+  }
 }
 
 .auth-card {
@@ -102,6 +208,14 @@
   background-color: var(--auth-illus-bg, #ffffff);
 }
 
+/* Desktop: gently zoom illustration so it feels larger */
+@media (min-width: 769px) {
+  .auth-card__illus-img {
+    transform: scale(1.05); /* noticeably smaller on laptop/desktop */
+    transform-origin: center;
+  }
+}
+
 /* Right panel: form (white, clean) - form vertically centered */
 .auth-card__right {
   padding: 2rem 2rem 2rem;
@@ -134,7 +248,9 @@
   justify-content: center;
   color: #64748b;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .auth-card__close:hover {
   background: #f1f5f9;
@@ -221,7 +337,10 @@
   background: #fafafa;
   color: var(--text-primary, #1e293b);
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
 }
 .auth-form__input::placeholder {
   color: #9ca3af;
@@ -276,7 +395,10 @@
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #fafafa;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
 }
 
 .auth-form__radio-label:hover {
@@ -331,7 +453,9 @@
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
   margin-top: 0.5rem;
 }
 .auth-form__submit:hover:not(:disabled) {
@@ -379,7 +503,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .auth-form__social-btn:hover {
   background: #f9fafb;
@@ -398,6 +525,7 @@
   color: #64748b;
   margin-top: auto;
   padding-top: 0.25rem;
+  white-space: nowrap;
 }
 .auth-form__footer a {
   color: #2563eb;

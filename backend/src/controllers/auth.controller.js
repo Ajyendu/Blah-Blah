@@ -41,6 +41,7 @@ export const signup = async (req, res) => {
       if (!codeExists) isUnique = true;
     }
 
+    // Theme is per-account; default is bright mode.
     const user = await User.create({
       fullName,
       email,
@@ -48,13 +49,14 @@ export const signup = async (req, res) => {
       userCode,
       gender,
       profilePic: profilePic || "",
+      theme: null,
     });
 
     const token = generateToken(user._id, res);
 
     // Re-fetch so response matches DB and includes all fields
     const saved = await User.findById(user._id)
-      .select("_id fullName email profilePic userCode gender")
+      .select("_id fullName email profilePic userCode gender theme")
       .lean();
 
     res.status(201).json({
@@ -65,6 +67,7 @@ export const signup = async (req, res) => {
         profilePic: saved.profilePic || "",
         userCode: saved.userCode,
         gender: saved.gender || "",
+        theme: saved.theme || null,
       },
       token,
     });
@@ -99,6 +102,7 @@ export const login = async (req, res) => {
         profilePic: user.profilePic || "",
         userCode: user.userCode,
         gender: user.gender || "",
+        theme: user.theme || null,
       },
       token,
     });
@@ -121,7 +125,7 @@ export const checkAuth = async (req, res) => {
   }
 
   const user = await User.findById(req.user._id).select(
-    "_id fullName email profilePic userCode gender",
+    "_id fullName email profilePic userCode gender theme",
   );
 
   if (!user) {
@@ -135,12 +139,13 @@ export const checkAuth = async (req, res) => {
     profilePic: user.profilePic || "",
     userCode: user.userCode,
     gender: user.gender || "",
+    theme: user.theme || null,
   });
 };
 
 // ================== UPDATE PROFILE ==================
 export const updateProfile = async (req, res) => {
-  const { profilePic, fullName, gender } = req.body;
+  const { profilePic, fullName, gender, theme } = req.body;
   const userId = req.user._id;
 
   try {
@@ -155,9 +160,12 @@ export const updateProfile = async (req, res) => {
       const upload = await cloudinary.uploader.upload(profilePic);
       updates.profilePic = upload.secure_url;
     }
+    if (theme && typeof theme === "object") {
+      updates.theme = theme;
+    }
     if (Object.keys(updates).length === 0) {
       const user = await User.findById(userId).select(
-        "_id fullName email profilePic userCode gender",
+        "_id fullName email profilePic userCode gender theme",
       );
       return res.status(200).json(user);
     }
@@ -165,7 +173,7 @@ export const updateProfile = async (req, res) => {
       userId,
       updates,
       { new: true },
-    ).select("_id fullName email profilePic userCode gender");
+    ).select("_id fullName email profilePic userCode gender theme");
 
     return res.status(200).json(updatedUser);
   } catch (err) {

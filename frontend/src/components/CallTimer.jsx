@@ -19,13 +19,19 @@ function CallTimer({ active }) {
   const hours = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  const h = String(hours).padStart(2, "0");
-  const m = String(mins).padStart(2, "0");
-  const s = String(secs).padStart(2, "0");
+
+  let label;
+  if (seconds < 60) {
+    label = `${secs}s`;
+  } else if (seconds < 3600) {
+    label = `${mins}m ${secs}s`;
+  } else {
+    label = `${hours}h ${mins}m ${secs}s`;
+  }
 
   return (
-    <span style={{ color: "#fff", fontSize: "14px", minWidth: "100px" }}>
-      {h}h {m}m {s}s
+    <span style={{ color: "#fff", fontSize: "14px" }}>
+      {label}
     </span>
   );
 }

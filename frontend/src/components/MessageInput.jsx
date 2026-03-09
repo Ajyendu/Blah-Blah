@@ -7,6 +7,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
+import { EMOJI_CATEGORIES } from "./emojiList";
 import toast from "react-hot-toast";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -62,6 +63,7 @@ function DurationWheelColumn({ value, max, label, onChange, format }) {
     ? (i) => format(i)
     : (i) => String(i).padStart(2, "0");
   const wheelAccumRef = useRef(0);
+  const touchStartYRef = useRef(null);
   const prevValueRef = useRef(value);
   const [slideDir, setSlideDir] = useState(null);
 
@@ -100,6 +102,36 @@ function DurationWheelColumn({ value, max, label, onChange, format }) {
     }
   };
 
+  const handleTouchStart = (e) => {
+    if (!e.touches || e.touches.length === 0) return;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchStartYRef.current == null || !e.touches || e.touches.length === 0)
+      return;
+    const currentY = e.touches[0].clientY;
+    const dy = currentY - touchStartYRef.current;
+    const THRESHOLD = 12;
+    if (dy >= THRESHOLD) {
+      // swipe down → go to previous
+      touchStartYRef.current = currentY;
+      const prev = value === 0 ? max : value - 1;
+      onChange(prev);
+      triggerSlide("down");
+    } else if (dy <= -THRESHOLD) {
+      // swipe up → go to next
+      touchStartYRef.current = currentY;
+      const next = value === max ? 0 : value + 1;
+      onChange(next);
+      triggerSlide("up");
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartYRef.current = null;
+  };
+
   const goUp = () => {
     const next = value === max ? 0 : value + 1;
     onChange(next);
@@ -109,6 +141,18 @@ function DurationWheelColumn({ value, max, label, onChange, format }) {
     const prev = value === 0 ? max : value - 1;
     onChange(prev);
     triggerSlide("down");
+  };
+
+  const handleArrowUpClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    goDown();
+  };
+
+  const handleArrowDownClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    goUp();
   };
 
   const stripClass = [
@@ -125,7 +169,7 @@ function DurationWheelColumn({ value, max, label, onChange, format }) {
       <button
         type="button"
         className="duration-wheel__arrow duration-wheel__arrow--up"
-        onClick={goDown}
+          onClick={handleArrowUpClick}
         aria-label={`Increase ${label}`}
       >
         <ChevronUp size={14} />
@@ -133,6 +177,9 @@ function DurationWheelColumn({ value, max, label, onChange, format }) {
       <div
         className="duration-wheel__viewport"
         onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         role="region"
         aria-label={`Set ${label}`}
       >
@@ -153,7 +200,7 @@ function DurationWheelColumn({ value, max, label, onChange, format }) {
       <button
         type="button"
         className="duration-wheel__arrow duration-wheel__arrow--down"
-        onClick={goUp}
+        onClick={handleArrowDownClick}
         aria-label={`Decrease ${label}`}
       >
         <ChevronDown size={14} />
@@ -177,6 +224,12 @@ const MessageInput = () => {
   const [attachedFileName, setAttachedFileName] = useState("");
 
   const [showPicker, setShowPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState(
+    EMOJI_CATEGORIES[0]?.id ?? "smileys",
+  );
+  const [recentEmojis, setRecentEmojis] = useState([]);
+  const RECENT_EMOJI_KEY = "blah-blah-recent-emojis";
   const [mode, setMode] = useState("datetime"); // duration | datetime
 
   // duration parts
@@ -189,6 +242,9 @@ const MessageInput = () => {
     if (!el) return;
 
     const preventScroll = (e) => {
+      // Allow scrolling inside emoji picker / timer picker
+      if (e.target && e.target.closest(".emoji-picker")) return;
+      if (e.target && e.target.closest(".timer-picker")) return;
       e.preventDefault();
     };
 
@@ -199,6 +255,19 @@ const MessageInput = () => {
       el.removeEventListener("wheel", preventScroll);
       el.removeEventListener("touchmove", preventScroll);
     };
+  }, []);
+
+  // Load recent emojis from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_EMOJI_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setRecentEmojis(parsed);
+        }
+      }
+    } catch (_) {}
   }, []);
 
   // datetime (year, month 1-12, day 1-31, hours 0-23, minutes 0-59, seconds 0-59)
@@ -221,8 +290,8 @@ const MessageInput = () => {
   const [dtMinutes, setDtMinutes] = useState(() => defaultDt().minutes);
   const [dtSeconds, setDtSeconds] = useState(() => defaultDt().seconds);
 
-  // after user changes hours/minutes/seconds once, show time row above date row
-  const [hasPickedTimeOnce, setHasPickedTimeOnce] = useState(false);
+  // Always use the "time row visible" layout to avoid rows swapping when hours are changed
+  const [hasPickedTimeOnce, setHasPickedTimeOnce] = useState(true);
 
   // preview only (NOT sent)
   const [previewMs, setPreviewMs] = useState(null);
@@ -236,6 +305,7 @@ const MessageInput = () => {
     const close = (e) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target)) {
         setShowPicker(false);
+        setShowEmojiPicker(false);
       }
     };
     window.addEventListener("mousedown", close);
@@ -402,6 +472,27 @@ const MessageInput = () => {
 
   /* ================= RENDER ================= */
 
+  const emojiTabs = [
+    { id: "recent", label: "Recent" },
+    ...EMOJI_CATEGORIES.map((c) => ({ id: c.id, label: c.label })),
+  ];
+
+  const getEmojisForCategory = (id) => {
+    if (id === "recent") return recentEmojis;
+    return EMOJI_CATEGORIES.find((c) => c.id === id)?.emojis || [];
+  };
+
+  const handleEmojiClick = (emoji) => {
+    setText((prev) => `${prev}${emoji}`);
+    setRecentEmojis((prev) => {
+      const next = [emoji, ...prev.filter((e) => e !== emoji)].slice(0, 40);
+      try {
+        localStorage.setItem(RECENT_EMOJI_KEY, JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  };
+
   return (
     <div className="message-input-ref relative">
       {previewMs && (
@@ -500,6 +591,48 @@ const MessageInput = () => {
           className="message-input-ref__extra message-input-ref__extra--has-picker"
           ref={pickerRef}
         >
+          {showEmojiPicker && (
+            <div className="emoji-picker">
+              <div className="emoji-picker__tabs">
+                {emojiTabs.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    className={`emoji-picker__tab ${
+                      emojiCategory === cat.id ? "emoji-picker__tab--active" : ""
+                    }`}
+                    onClick={() => setEmojiCategory(cat.id)}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              <div className="emoji-picker__grid">
+                {getEmojisForCategory(emojiCategory).map((emoji, idx) => (
+                  <button
+                    key={`${emoji}-${idx}`}
+                    type="button"
+                    className="emoji-picker__item"
+                    onClick={() => handleEmojiClick(emoji)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setShowEmojiPicker((v) => !v);
+              setShowPicker(false);
+            }}
+            className="message-input-ref__attach"
+            aria-label="Emoji"
+            title="Emoji"
+          >
+            🙂
+          </button>
           {showPicker && (
             <div
               className={`timer-picker ${
@@ -864,7 +997,11 @@ const MessageInput = () => {
           )}
           <button
             type="button"
-            onClick={() => !fileAndTimerDisabled && setShowPicker((v) => !v)}
+            onClick={() => {
+              if (fileAndTimerDisabled) return;
+              setShowPicker((v) => !v);
+              setShowEmojiPicker(false);
+            }}
             className={`message-input-ref__attach ${
               fileAndTimerDisabled ? "message-input-ref__attach--disabled" : ""
             }`}

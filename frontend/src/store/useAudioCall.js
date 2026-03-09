@@ -4,6 +4,8 @@
 import { useRef, useEffect, useState } from "react";
 import { useAuthStore } from "./useAuthStore";
 import { unlockForCall, playRemoteStream, stopRemoteAudio } from "../lib/callAudio.js";
+import toast from "react-hot-toast";
+import { ringtone } from "../components/utils/ringtone";
 
 // Single source of truth for the remote media stream (set in ontrack)
 let remoteStream = null;
@@ -41,6 +43,7 @@ export function useAudioCall() {
   const remoteUserIdRef = useRef(null);
   const iceCandidateQueueRef = useRef([]);
   const [remoteStreamState, setRemoteStreamState] = useState(null);
+  const [isMuted, setIsMuted] = useState(false);
   const answerAudioResolveRef = useRef(null);
 
   const drainIceQueue = async () => {
@@ -158,7 +161,19 @@ export function useAudioCall() {
 
   /* ================= CALLER ================= */
   const startCall = async (userId, type) => {
+    // Prevent starting a new call while one is active (audio or video)
+    if (pcRef.current || localStreamRef.current) {
+      toast.error("Another call is already in progress. Please end it first.");
+      return;
+    }
     unlockForCall();
+    try {
+      ringtone.currentTime = 0;
+      ringtone.volume = 1;
+      ringtone.play().catch(() => {});
+    } catch {
+      // ignore autoplay errors
+    }
     const toUserId = String(userId);
     if (pcRef.current) {
       pcRef.current.close();
@@ -307,6 +322,10 @@ export function useAudioCall() {
       localStreamRef.current = null;
     }
 
+    setIsMuted(false);
+    ringtone.pause();
+    ringtone.currentTime = 0;
+
     remoteUserIdRef.current = null;
     iceCandidateQueueRef.current = [];
     if (answerAudioResolveRef.current) {
@@ -322,10 +341,34 @@ export function useAudioCall() {
     stopRemoteAudio();
   };
 
+  const toggleMute = () => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const nextMuted = !isMuted;
+    // Toggle local microphone track so the other user stops hearing us.
+    stream.getAudioTracks().forEach((t) => {
+      t.enabled = !nextMuted;
+    });
+    // Also ensure all outbound audio senders are updated.
+    const pc = pcRef.current;
+    if (pc) {
+      pc.getSenders()
+        .filter((s) => s.track && s.track.kind === "audio")
+        .forEach((sender) => {
+          if (sender.track) {
+            sender.track.enabled = !nextMuted;
+          }
+        });
+    }
+    setIsMuted(nextMuted);
+  };
+
   /* ================= SOCKET ================= */
   useEffect(() => {
     if (!socket) return;
     socket.on("call-answered", async ({ answer }) => {
+      ringtone.pause();
+      ringtone.currentTime = 0;
       const pc = pcRef.current;
       if (!pc || pc.signalingState !== "have-local-offer") return;
       try {
@@ -373,5 +416,5 @@ export function useAudioCall() {
     };
   }, [socket]);
 
-  return { startCall, answerCall, endCall, remoteStream: remoteStreamState };
+  return { startCall, answerCall, endCall, remoteStream: remoteStreamState, isMuted, toggleMute };
 }

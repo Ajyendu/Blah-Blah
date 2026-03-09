@@ -34,6 +34,12 @@ const userSchema = new mongoose.Schema(
       enum: ["male", "female"],
       default: "",
     },
+
+    // Per-account UI theme (bright mode by default; stored per user)
+    theme: {
+      type: Object,
+      default: null,
+    },
   },
   { timestamps: true }
 );
