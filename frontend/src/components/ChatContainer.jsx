@@ -135,8 +135,8 @@ const ChatContainer = ({
       if (!vv) return;
       const heightDiff = window.innerHeight - vv.height;
       if (heightDiff > 80) {
-        // Keyboard likely visible – raise input bar above it (plus a small gap)
-        const offset = Math.min(heightDiff + 8, 320);
+        // Keyboard likely visible – raise input bar exactly by keyboard height (no extra gap)
+        const offset = Math.min(heightDiff, 320);
         document.documentElement.style.setProperty(
           "--input-bar-bottom",
           `${offset}px`,
