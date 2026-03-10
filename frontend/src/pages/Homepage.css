@@ -191,12 +191,14 @@
 
   /* Reserve space above fixed bottom bar for all app-card content */
   .app-shell .app-card .app-content-wrap {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    /* Match fixed bottom nav height on mobile; avoid env() so position stays constant while scrolling */
+    padding-bottom: 72px;
   }
 
   /* Message input bar height for bottom sheet offset + gap so title bar stays visible above input */
   .app-content-wrap {
-    --chat-input-bar-height: calc(92px + env(safe-area-inset-bottom, 0px));
+    /* Fixed height: input + small gap; no env() so minimized title bar stays locked above input */
+    --chat-input-bar-height: 92px;
   }
 }
 
