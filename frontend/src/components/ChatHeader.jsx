@@ -79,7 +79,7 @@ const ChatHeader = ({
     : isRequestSent
       ? "Request sent"
       : isPendingChat
-        ? "Accept to chat"
+        ? ""
         : isOnline
           ? "Online"
           : "Offline";
