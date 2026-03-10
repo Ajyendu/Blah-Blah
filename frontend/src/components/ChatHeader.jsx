@@ -72,12 +72,14 @@ const ChatHeader = ({
 
   /** Chat not accepted yet — applies on both sender's and receiver's device */
   const isPendingChat = selectedChat && !selectedChat.acceptedBy;
+  /** Pending chat where *we* are the receiver (only here should we see Accept/Reject) */
+  const isReceiverPending = isPendingChat && !isRequestSent;
 
   // When pending or rejected: show status only (never "Online"/"Offline"); only messaging allowed on both devices
   const subtitleText = showRejected
     ? "Request rejected"
     : isRequestSent
-      ? ""
+      ? "Request sent"
       : isPendingChat
         ? ""
         : isOnline
@@ -138,7 +140,7 @@ const ChatHeader = ({
         <div className="chat-header-ref__info">
           <h1 className="chat-header-ref__title">{selectedUser.fullName}</h1>
           <p className={subtitleClass}>{subtitleText}</p>
-          {isMobile && isPendingChat && (
+          {isMobile && isReceiverPending && (
             <div className="chat-header-ref__accept-reject">
               <button
                 type="button"
