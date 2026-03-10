@@ -125,6 +125,42 @@ const ChatContainer = ({
     String(videoUserIdByChat[chatIdStr]) === String(selectedUser?._id);
   const showVideoIndicator = otherUserHasVideoOpen && !isVideoPanelOpen;
 
+  // On mobile, when the keyboard opens (visual viewport shrinks), raise the fixed
+  // message input bar so it stays above the keyboard instead of being covered.
+  useEffect(() => {
+    if (!isMobile || typeof window === "undefined" || !window.visualViewport) return;
+
+    const updateInputBottom = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const heightDiff = window.innerHeight - vv.height;
+      if (heightDiff > 80) {
+        // Keyboard likely visible – raise input bar above it (plus a small gap)
+        const offset = Math.min(heightDiff + 8, 320);
+        document.documentElement.style.setProperty(
+          "--input-bar-bottom",
+          `${offset}px`,
+        );
+      } else {
+        // Keyboard hidden – reset to default just above bottom nav
+        document.documentElement.style.setProperty(
+          "--input-bar-bottom",
+          "72px",
+        );
+      }
+    };
+
+    updateInputBottom();
+    window.visualViewport.addEventListener("resize", updateInputBottom);
+    window.visualViewport.addEventListener("scroll", updateInputBottom);
+
+    return () => {
+      window.visualViewport.removeEventListener("resize", updateInputBottom);
+      window.visualViewport.removeEventListener("scroll", updateInputBottom);
+      document.documentElement.style.setProperty("--input-bar-bottom", "72px");
+    };
+  }, [isMobile]);
+
   const bottomRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const peekScrollTimeoutRef = useRef(null);

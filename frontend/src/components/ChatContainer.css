@@ -22,8 +22,8 @@
     position: fixed;
     left: 0;
     right: 0;
-    /* Use a constant offset so it doesn't shift when the browser's safe-area inset changes */
-    bottom: 72px;
+    /* Bottom offset is controlled via CSS var so we can raise it above the keyboard on mobile */
+    bottom: var(--input-bar-bottom, 72px);
     margin-bottom: 0;
     z-index: 101;
   }
