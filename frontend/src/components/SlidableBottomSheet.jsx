@@ -128,11 +128,6 @@ export default function SlidableBottomSheet({
     [onClose]
   );
 
-  const expandedTranslateY = Math.max(
-    0,
-    Math.min(dragMaxDown, dragOffsetY)
-  );
-
   return (
     <div
       ref={sheetRef}
@@ -144,18 +139,14 @@ export default function SlidableBottomSheet({
       style={{
         "--expanded-ratio": EXPANDED_RATIO,
         "--handle-height-px": HANDLE_HEIGHT_PX,
-        ...(isMinimized
-          ? {
-              height: `${HANDLE_HEIGHT_PX}px`,
-              maxHeight: `${HANDLE_HEIGHT_PX}px`,
-              bottom: "calc(var(--chat-input-bar-height, 100px) + 2px)",
-              transform: "translateY(0)",
-            }
-          : {
-              height: "100%",
-              maxHeight: "92vh",
-              transform: `translateY(${expandedTranslateY}px)`,
-            }),
+
+        height: "100%",
+        maxHeight: "92vh",
+
+        transform: `translateY(${Math.max(
+          0,
+          Math.min(dragMaxDown, (isMinimized ? dragMaxDown : 0) + dragOffsetY)
+        )}px)`,
       }}
     >
       <div
