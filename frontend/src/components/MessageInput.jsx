@@ -1027,24 +1027,6 @@ const MessageInput = () => {
         </button>
       </form>
 
-      {showAcceptReject && (
-        <div className="message-input-ref__accept-reject">
-          <button
-            type="button"
-            className="accept"
-            onClick={() => acceptChat(selectedChat._id)}
-          >
-            Accept
-          </button>
-          <button
-            type="button"
-            className="reject"
-            onClick={() => rejectChat(selectedChat._id)}
-          >
-            Reject
-          </button>
-        </div>
-      )}
     </div>
   );
 };

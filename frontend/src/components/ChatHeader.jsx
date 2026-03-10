@@ -35,6 +35,8 @@ const ChatHeader = ({
     clearSelectedChat,
     clearMessagesForCurrentChat,
     rejectedChatId,
+    acceptChat,
+    rejectChat,
   } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
   const {
@@ -136,6 +138,24 @@ const ChatHeader = ({
         <div className="chat-header-ref__info">
           <h1 className="chat-header-ref__title">{selectedUser.fullName}</h1>
           <p className={subtitleClass}>{subtitleText}</p>
+          {isMobile && isPendingChat && (
+            <div className="chat-header-ref__accept-reject">
+              <button
+                type="button"
+                className="chat-header-ref__accept"
+                onClick={() => acceptChat(selectedChat._id)}
+              >
+                Accept
+              </button>
+              <button
+                type="button"
+                className="chat-header-ref__reject"
+                onClick={() => rejectChat(selectedChat._id)}
+              >
+                Reject
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
