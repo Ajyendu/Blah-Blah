@@ -34,10 +34,11 @@
   border: 5px solid var(--content-border, #000);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   box-sizing: border-box;
-  /* Bottom sheet sits above the message input bar; extra gap so title bar is fully visible */
+  /* Bottom sheet sits above the message input bar */
   --chat-input-bar-height: 100px;
-  /* Extra gap between bottom sheet (Games, Notes, Watch Together, Drawing) and chat input */
-  --panel-chat-gap: 4px;
+  /* Gap between bottom sheet (Games, Notes, Watch Together, Drawing) and chat input.
+     Set to 0 so the sheet visually touches the input bar when open. */
+  --panel-chat-gap: 0px;
 }
 
 /* Main content area uses theme app bg (white in bright mode, dark in dark mode) */
@@ -69,7 +70,7 @@
 
 /* When panel is minimized on mobile: last message just above the panel title bar, 2px gap */
 .app-content-wrap.bottom-sheet-peek-visible .chat-container-ref {
-  padding-bottom: calc(48px + 2px); /* title bar height + minimal gap */
+  padding-bottom: calc(100px + 2px); /* title bar height (handle) + minimal gap */
 }
 
 .chat-container-ref {
@@ -198,6 +199,7 @@
     --chat-input-bar-height: calc(92px + env(safe-area-inset-bottom, 0px));
   }
 }
+
 .flash {
   animation: pulse 1.5s ease;
 }

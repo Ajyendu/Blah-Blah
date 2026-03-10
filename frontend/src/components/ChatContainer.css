@@ -11,13 +11,28 @@
   border-top-left-radius: var(--content-corner-radius, 30px);
   border-top-right-radius: var(--content-corner-radius, 30px);
   margin-bottom: 4px; /* move bar up slightly */
-  touch-action: none;
+  margin-top: 5px; /* move bar 5px down */
+  /* Do not block vertical scrolling gestures */
+  touch-action: auto;
+}
+
+@media (max-width: 768px) {
+  /* On mobile, keep the input bar fixed just above the bottom nav bar */
+  .chat-input-bar-wrap {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(67px + env(safe-area-inset-bottom, 0px));
+    margin-bottom: 0;
+    z-index: 101;
+  }
 }
 
 .chat-container-ref {
   flex: 1;
   min-height: 0; /* allow shrink so overflow scroll works in flex layout */
-  overflow-y: auto;
+  /* scrolling is driven by utility classes (e.g. overflow-y-auto) on this element */
+  -webkit-overflow-scrolling: touch;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y; /* allow vertical scroll when panel is open or hidden */

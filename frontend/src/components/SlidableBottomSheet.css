@@ -6,8 +6,8 @@
   left: 0;
   right: 0;
 
-  height: calc(var(--expanded-ratio, 0.85) * 100%);
-  max-height: 85vh;
+  height: 100%;
+  max-height: 92vh;
 
   display: flex;
   flex-direction: column;
@@ -38,12 +38,8 @@
   transition: none;
 }
 
-/* Minimized state */
+/* Minimized state: only title bar visible (just above message input); height unchanged so transform can show bottom 48px */
 .slidable-bottom-sheet--minimized {
-  height: calc(var(--peek-ratio, 0.1) * 100%);
-  max-height: 10vh;
-  min-height: 48px;
-
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Let scroll pass through except handle */
@@ -202,7 +198,4 @@
 .slidable-bottom-sheet__content .chat-video-panel .chat-video-panel__resize {
   display: none;
 }
-.slidable-bottom-sheet--minimized {
-  pointer-events: none;
-  touch-action: none;
-}
+

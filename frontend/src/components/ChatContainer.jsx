@@ -89,10 +89,10 @@ const ChatContainer = ({
   const setTruthDareOpen = useGameStore((s) => s.setTruthDareOpen);
   const setOpenToGameIndex = useGameStore((s) => s.setOpenToGameIndex);
   const gamePlayingUserIdByChat = useGameStore(
-    (s) => s.gamePlayingUserIdByChat
+    (s) => s.gamePlayingUserIdByChat,
   );
   const gamePlayingGameNameByChat = useGameStore(
-    (s) => s.gamePlayingGameNameByChat
+    (s) => s.gamePlayingGameNameByChat,
   );
   const isMobile = useIsMobile();
 
@@ -338,7 +338,7 @@ const ChatContainer = ({
 
   const lastSeenMessageId = (() => {
     const mySeenMessages = safeMessages.filter(
-      (m) => String(m.senderId) === String(authUser._id) && m.seenAt
+      (m) => String(m.senderId) === String(authUser._id) && m.seenAt,
     );
 
     if (mySeenMessages.length === 0) return null;
@@ -444,7 +444,7 @@ const ChatContainer = ({
         >
           {(() => {
             const filtered = safeMessages.filter(
-              (m) => !m.deletedFor?.includes(authUser._id)
+              (m) => !m.deletedFor?.includes(authUser._id),
             );
             return filtered.map((message, index) => {
               const prev = filtered[index - 1];

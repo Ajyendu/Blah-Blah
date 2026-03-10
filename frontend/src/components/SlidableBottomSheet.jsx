@@ -2,11 +2,9 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { X } from "lucide-react";
 import "./SlidableBottomSheet.css";
 
-const PEEK_RATIO = 0.1; // 10% visible when minimized
-const EXPANDED_RATIO = 0.85;
+const EXPANDED_RATIO = 0.85; // slide stops at 85% of height from top when expanded
 const SNAP_THRESHOLD_PX = 48;
-const HANDLE_HEIGHT_PX = 48;
-const INPUT_BAR_OFFSET_PX = 72;
+const HANDLE_HEIGHT_PX = 100; // when minimized, only this much (handle) visible
 
 export default function SlidableBottomSheet({
   children,
@@ -57,13 +55,9 @@ export default function SlidableBottomSheet({
       dragStartMinimized.current = isMinimized;
       isDraggingRef.current = true;
       if (sheetRef.current) {
-        const parent = sheetRef.current.parentElement;
-        const containerHeight = parent
-          ? parent.getBoundingClientRect().height
-          : 400;
         const sheetHeight = sheetRef.current.getBoundingClientRect().height;
 
-        const maxDown = Math.max(0, sheetHeight - INPUT_BAR_OFFSET_PX);
+        const maxDown = Math.max(0, sheetHeight - HANDLE_HEIGHT_PX);
         dragMaxDownRef.current = maxDown;
         setDragMaxDown(maxDown);
       } else {
@@ -134,26 +128,6 @@ export default function SlidableBottomSheet({
     [onClose]
   );
 
-  /* Drag = change height only: down from 85% to 10%, up from 10% to 85%. One motion, stops at title. */
-  const isDraggingDown = !isMinimized && dragOffsetY > 0 && dragMaxDown > 0;
-  const isDraggingUp = isMinimized && dragOffsetY < 0 && dragMaxDown > 0;
-  const dragHeightRatio = isDraggingDown
-    ? EXPANDED_RATIO -
-      (dragOffsetY / dragMaxDown) * (EXPANDED_RATIO - PEEK_RATIO)
-    : isDraggingUp
-    ? PEEK_RATIO + (-dragOffsetY / dragMaxDown) * (EXPANDED_RATIO - PEEK_RATIO)
-    : null;
-
-  /* When just opened, start at bottom (0) so panel emerges from bottom; then animate to expanded */
-  const effectiveExpandedRatio =
-    !isMinimized && isEntrance ? 0 : EXPANDED_RATIO;
-  const heightRatio =
-    dragHeightRatio != null
-      ? dragHeightRatio
-      : isMinimized
-      ? PEEK_RATIO
-      : effectiveExpandedRatio;
-
   return (
     <div
       ref={sheetRef}
@@ -163,11 +137,11 @@ export default function SlidableBottomSheet({
           : "slidable-bottom-sheet--expanded"
       } ${dragOffsetY !== 0 ? "slidable-bottom-sheet--dragging" : ""}`}
       style={{
-        "--peek-ratio": PEEK_RATIO,
         "--expanded-ratio": EXPANDED_RATIO,
+        "--handle-height-px": HANDLE_HEIGHT_PX,
 
-        height: `${EXPANDED_RATIO * 100}%`,
-        maxHeight: "85vh",
+        height: "100%",
+        maxHeight: "92vh",
 
         transform: `translateY(${Math.max(
           0,

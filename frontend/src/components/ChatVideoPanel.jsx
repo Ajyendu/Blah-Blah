@@ -606,6 +606,74 @@ const ChatVideoPanel = () => {
           </button>
         </div>
 
+        {source === "youtube" && (
+          <div className="chat-video-panel__youtube-controls">
+            <div className="chat-video-panel__controls">
+              <div className="chat-video-panel__url-row">
+                <button
+                  type="button"
+                  className="chat-video-panel__url-icon-wrap"
+                  onClick={handlePasteFromClipboard}
+                  title="Paste from clipboard"
+                  aria-label="Paste URL"
+                >
+                  <Link size={20} strokeWidth={2.5} />
+                </button>
+                <input
+                  type="text"
+                  placeholder="YouTube URL"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="chat-video-panel__input chat-video-panel__url-input"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {source === "local" && (
+          <div className="chat-video-panel__local-controls">
+            <div className="chat-video-panel__local-mode">
+              <div className="chat-video-panel__local-mode-tabs">
+                <div
+                  className="chat-video-panel__local-mode-slider"
+                  aria-hidden
+                  style={{ transform: localPlaybackMode === "stream" ? "translateX(0)" : "translateX(100%)" }}
+                />
+                <button
+                  type="button"
+                  className={`chat-video-panel__local-mode-tab ${localPlaybackMode === "stream" ? "chat-video-panel__local-mode-tab--active" : ""}`}
+                  onClick={() => setLocalPlaybackMode("stream")}
+                >
+                  Stream
+                </button>
+                <button
+                  type="button"
+                  className={`chat-video-panel__local-mode-tab ${localPlaybackMode === "upload" ? "chat-video-panel__local-mode-tab--active" : ""}`}
+                  onClick={() => setLocalPlaybackMode("upload")}
+                >
+                  Upload
+                </button>
+              </div>
+            </div>
+            <label className="chat-video-panel__file-row">
+              <span className="chat-video-panel__file-icon-wrap" aria-hidden>
+                <Upload size={20} strokeWidth={2.5} />
+              </span>
+              <span className="chat-video-panel__file-btn">Choose video file</span>
+              <input
+                type="file"
+                accept="video/*"
+                onChange={handleLocalFile}
+                className="chat-video-panel__file-input"
+              />
+            </label>
+            <p className={`chat-video-panel__file-name ${!localFile && !syncedLocalVideoUrl ? "chat-video-panel__file-name--spacer" : ""}`} aria-hidden={!localFile && !syncedLocalVideoUrl}>
+              {localFile ? localFile.name : syncedLocalVideoUrl ? "Video shared with you" : "\u00A0"}
+            </p>
+          </div>
+        )}
+
         {/* Single player slot: same position in both YouTube and Local */}
         <div className={`chat-video-panel__player-zone ${source === "local" ? "chat-video-panel__player-zone--local" : ""}`}>
           {source === "youtube" && (
@@ -700,87 +768,19 @@ const ChatVideoPanel = () => {
               >
                 <SkipForward size={20} strokeWidth={2} />
               </button>
+              <button
+                type="button"
+                className="chat-video-panel__clear-btn"
+                onClick={handleClearVideo}
+                aria-label="Clear video"
+              >
+                <Trash2 size={16} />
+                Clear
+              </button>
             </div>
-            <button
-              type="button"
-              className="chat-video-panel__clear-btn"
-              onClick={handleClearVideo}
-              aria-label="Clear video"
-            >
-              <Trash2 size={16} />
-              Clear
-            </button>
           </div>
           );
         })()}
-
-        {source === "youtube" && (
-          <div className="chat-video-panel__youtube-controls">
-            <div className="chat-video-panel__controls">
-              <div className="chat-video-panel__url-row">
-                <button
-                  type="button"
-                  className="chat-video-panel__url-icon-wrap"
-                  onClick={handlePasteFromClipboard}
-                  title="Paste from clipboard"
-                  aria-label="Paste URL"
-                >
-                  <Link size={20} strokeWidth={2.5} />
-                </button>
-                <input
-                  type="text"
-                  placeholder="YouTube URL"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  className="chat-video-panel__input chat-video-panel__url-input"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {source === "local" && (
-          <div className="chat-video-panel__local-controls">
-            <div className="chat-video-panel__local-mode">
-              <div className="chat-video-panel__local-mode-tabs">
-                <div
-                  className="chat-video-panel__local-mode-slider"
-                  aria-hidden
-                  style={{ transform: localPlaybackMode === "stream" ? "translateX(0)" : "translateX(100%)" }}
-                />
-                <button
-                  type="button"
-                  className={`chat-video-panel__local-mode-tab ${localPlaybackMode === "stream" ? "chat-video-panel__local-mode-tab--active" : ""}`}
-                  onClick={() => setLocalPlaybackMode("stream")}
-                >
-                  Stream
-                </button>
-                <button
-                  type="button"
-                  className={`chat-video-panel__local-mode-tab ${localPlaybackMode === "upload" ? "chat-video-panel__local-mode-tab--active" : ""}`}
-                  onClick={() => setLocalPlaybackMode("upload")}
-                >
-                  Upload
-                </button>
-              </div>
-            </div>
-            <label className="chat-video-panel__file-row">
-              <span className="chat-video-panel__file-icon-wrap" aria-hidden>
-                <Upload size={20} strokeWidth={2.5} />
-              </span>
-              <span className="chat-video-panel__file-btn">Choose video file</span>
-              <input
-                type="file"
-                accept="video/*"
-                onChange={handleLocalFile}
-                className="chat-video-panel__file-input"
-              />
-            </label>
-            <p className={`chat-video-panel__file-name ${!localFile && !syncedLocalVideoUrl ? "chat-video-panel__file-name--spacer" : ""}`} aria-hidden={!localFile && !syncedLocalVideoUrl}>
-              {localFile ? localFile.name : syncedLocalVideoUrl ? "Video shared with you" : "\u00A0"}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
