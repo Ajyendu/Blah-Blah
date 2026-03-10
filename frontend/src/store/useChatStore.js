@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 import { useNoteStore } from "./useNoteStore";
+import { useGameStore } from "./useGameStore";
 let listenersAttached = false;
 
 export const useChatStore = create((set, get) => ({
@@ -186,8 +187,18 @@ export const useChatStore = create((set, get) => ({
     socket.emit("stop_screen_share");
   },
 
-  setSelectedChat: (chat) =>
-    set((state) => {
+  setSelectedChat: (chat) => {
+    // Whenever we move to a different chat (or away from chat), close panels tied to the previous chat
+    const noteState = useNoteStore.getState();
+    const gameState = useGameStore.getState();
+    noteState.setIsNotesOpen(false);
+    noteState.setIsDrawingOpen(false);
+    noteState.setIsVideoPanelOpen(false);
+    noteState.setPanelMinimized(false);
+    gameState.setTruthDareOpen(false);
+    gameState.setPanelMinimized(false);
+
+    return set((state) => {
       const isSameChat = state.selectedChat?._id === chat?._id;
       if (isSameChat) return state; // avoid clearing messages on same-chat click
       const selectedUser = chat.participants.find(
@@ -201,7 +212,8 @@ export const useChatStore = create((set, get) => ({
         messages: [],
         unreadCountByChatId: nextUnread,
       };
-    }),
+    });
+  },
 
   getUsers: async () => {
     set({ isUsersLoading: true });

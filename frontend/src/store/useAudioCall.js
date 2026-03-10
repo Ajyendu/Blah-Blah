@@ -326,6 +326,12 @@ export function useAudioCall() {
     ringtone.pause();
     ringtone.currentTime = 0;
 
+    const remoteId = remoteUserIdRef.current;
+    if (remoteId && socket) {
+      try {
+        socket.emit("end-call", { to: String(remoteId) });
+      } catch (_) {}
+    }
     remoteUserIdRef.current = null;
     iceCandidateQueueRef.current = [];
     if (answerAudioResolveRef.current) {
@@ -415,6 +421,19 @@ export function useAudioCall() {
       socket.off("call-ended", handleCallEnded);
     };
   }, [socket]);
+
+  // End call cleanly when the page is refreshed/closed
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (pcRef.current || localStreamRef.current || remoteStream) {
+        try {
+          endCall();
+        } catch (_) {}
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   return { startCall, answerCall, endCall, remoteStream: remoteStreamState, isMuted, toggleMute };
 }

@@ -5,7 +5,7 @@ import ChatListPanel from "../components/ChatListPanel";
 import { useAuthStore } from "../store/useAuthStore";
 import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useIsMobile } from "../hooks/useMediaQuery";
 import "./Homepage.css";
 import ChatNotes from "../components/ChatNotes";
@@ -33,11 +33,39 @@ const HomePage = ({
   const setTruthDareOpen = useGameStore((s) => s.setTruthDareOpen);
 
   const { authUser } = useAuthStore();
-  const { selectedUser } = useChatStore();
+  const { selectedUser, selectedChat } = useChatStore();
   const theme = useThemeStore((s) => s.theme);
   const isMobile = useIsMobile();
 
   const messagesRef = useRef(null);
+
+  // When there is no active chat selected (main page / no conversation), ensure all bottom sheets are closed
+  useEffect(() => {
+    if (!isMobile && selectedUser) return;
+    if (selectedChat && selectedUser) return;
+    if (isNotesOpen || isDrawingOpen || isVideoPanelOpen || isTruthDareOpen) {
+      setIsNotesOpen(false);
+      setIsDrawingOpen(false);
+      setIsVideoPanelOpen(false);
+      setPanelMinimized(false);
+      setTruthDareOpen(false);
+      setGamePanelMinimized(false);
+    }
+  }, [
+    isMobile,
+    selectedChat,
+    selectedUser,
+    isNotesOpen,
+    isDrawingOpen,
+    isVideoPanelOpen,
+    isTruthDareOpen,
+    setIsNotesOpen,
+    setIsDrawingOpen,
+    setIsVideoPanelOpen,
+    setPanelMinimized,
+    setTruthDareOpen,
+    setGamePanelMinimized,
+  ]);
 
   return (
     // <div className="chat-container h-screen w-screen flex">

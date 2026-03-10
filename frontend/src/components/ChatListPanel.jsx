@@ -99,6 +99,7 @@ const ChatListPanel = () => {
             <button
               key={chat._id}
               onClick={() => {
+                // setSelectedChat already closes all panels; just ensure notes/game closed here too
                 setIsNotesOpen(false);
                 setTruthDareOpen(false);
                 setSelectedChat(chat);
