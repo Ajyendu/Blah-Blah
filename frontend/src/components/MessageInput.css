@@ -265,6 +265,19 @@
   margin-top: 10px;
 }
 
+@media (max-width: 768px) {
+  .message-input-ref__accept-reject {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .message-input-ref__accept-reject button {
+    flex: 1 1 0;
+    max-width: 140px;
+    text-align: center;
+  }
+}
+
 .message-input-ref__accept-reject button {
   padding: 8px 16px;
   border-radius: 10px;
