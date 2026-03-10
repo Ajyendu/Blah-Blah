@@ -37,8 +37,15 @@
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y; /* allow vertical scroll when panel is open or hidden */
-  padding: 16px 20px 24px; /* extra bottom padding so last message shows clearly above input bar */
+  padding: 16px 20px 24px; /* desktop: small bottom padding */
   border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  /* Mobile: small cushion so last message sits just above the input bar (not a huge gap) */
+  .chat-container-ref {
+    padding-bottom: 40px;
+  }
 }
 
 .chat-date-divider {

@@ -67,6 +67,8 @@ const ChatVideoPanel = () => {
   const [localObjectUrl, setLocalObjectUrl] = useState("");
   const resizeStartX = useRef(0);
   const resizeStartWidth = useRef(0);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const controlsTimeoutRef = useRef(null);
 
   const handleResizeStart = useCallback((e) => {
     e.preventDefault();
@@ -244,6 +246,46 @@ const ChatVideoPanel = () => {
   const [displayTime, setDisplayTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
+
+  // Active video flag (YouTube or local); declared before hooks that depend on it
+  const hasActiveVideo =
+    (source === "youtube" && youtubeId) ||
+    (source === "local" && (syncedLocalVideoUrl || localObjectUrl));
+
+  const bumpControlsVisible = useCallback(() => {
+    if (!hasActiveVideo) return;
+    setControlsVisible(true);
+    if (!isMobile) return;
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, 3000);
+  }, [hasActiveVideo, isMobile]);
+
+  useEffect(() => {
+    if (!hasActiveVideo) {
+      setControlsVisible(false);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
+      }
+      return;
+    }
+    // Show controls initially when video becomes active
+    setControlsVisible(true);
+    if (isMobile) {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = setTimeout(() => {
+        setControlsVisible(false);
+      }, 3000);
+    }
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = null;
+      }
+    };
+  }, [hasActiveVideo, isMobile]);
 
   const emitSync = useCallback(
     (event, currentTime, isPaused) => {
@@ -427,8 +469,6 @@ const ChatVideoPanel = () => {
     };
   }, [source, ytReady, youtubeId]);
 
-  const hasActiveVideo = (source === "youtube" && youtubeId) || (source === "local" && (syncedLocalVideoUrl || localObjectUrl));
-
   useEffect(() => {
     if (!hasActiveVideo || seekBarDraggingRef.current) return;
     const tick = () => {
@@ -462,6 +502,7 @@ const ChatVideoPanel = () => {
   const SKIP_SEC = 10;
 
   const handlePlayPause = useCallback(() => {
+    bumpControlsVisible();
     if (!hasActiveVideo) return;
     controlsInteractionRef.current = true;
     setTimeout(() => { controlsInteractionRef.current = false; }, 150);
@@ -493,6 +534,7 @@ const ChatVideoPanel = () => {
 
   const handleSeek = useCallback(
     (newTime) => {
+      bumpControlsVisible();
       if (!hasActiveVideo || typeof newTime !== "number" || Number.isNaN(newTime)) return;
       const t = Math.max(0, Math.min(newTime, duration || newTime));
       controlsInteractionRef.current = true;
@@ -516,10 +558,12 @@ const ChatVideoPanel = () => {
   );
 
   const handleSkipBack = useCallback(() => {
+    bumpControlsVisible();
     handleSeek(displayTime - SKIP_SEC);
   }, [displayTime, handleSeek]);
 
   const handleSkipForward = useCallback(() => {
+    bumpControlsVisible();
     handleSeek(displayTime + SKIP_SEC);
   }, [displayTime, handleSeek]);
 
@@ -675,7 +719,11 @@ const ChatVideoPanel = () => {
         )}
 
         {/* Single player slot: same position in both YouTube and Local */}
-        <div className={`chat-video-panel__player-zone ${source === "local" ? "chat-video-panel__player-zone--local" : ""}`}>
+        <div
+          className={`chat-video-panel__player-zone ${source === "local" ? "chat-video-panel__player-zone--local" : ""}`}
+          onMouseMove={bumpControlsVisible}
+          onTouchStart={bumpControlsVisible}
+        >
           {source === "youtube" && (
             youtubeId ? (
               <div className="chat-video-panel__player-wrap chat-video-panel__player-wrap--youtube">
@@ -715,7 +763,7 @@ const ChatVideoPanel = () => {
           )}
         </div>
 
-        {hasActiveVideo && (() => {
+        {hasActiveVideo && controlsVisible && (() => {
           const seekMax = Math.max(1, duration || 0);
           return (
           <div className="chat-video-panel__playback-bar">

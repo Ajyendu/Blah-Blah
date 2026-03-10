@@ -334,8 +334,8 @@
   font-size: 0.9375rem;
   border: 1px solid #d1d5db;
   border-radius: 10px;
-  background: #fafafa;
-  color: var(--text-primary, #1e293b);
+  background: #ffffff;
+  color: #111827; /* strong dark text for readability */
   outline: none;
   transition:
     border-color 0.15s,
@@ -343,12 +343,13 @@
     background 0.15s;
 }
 .auth-form__input::placeholder {
-  color: #9ca3af;
+  color: #9ca3af; /* subtle but still visible */
 }
 .auth-form__input:focus {
-  border-color: #ef4444;
-  background: #1e293b;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+  border-color: #f97316; /* warm accent (orange) instead of harsh red */
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.18);
 }
 
 .auth-form__input--with-right-btn {
