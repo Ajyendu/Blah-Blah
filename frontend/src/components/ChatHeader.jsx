@@ -77,7 +77,7 @@ const ChatHeader = ({
   const subtitleText = showRejected
     ? "Request rejected"
     : isRequestSent
-      ? "Request sent"
+      ? ""
       : isPendingChat
         ? ""
         : isOnline
