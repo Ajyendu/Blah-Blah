@@ -197,8 +197,8 @@
 
   /* Message input bar height for bottom sheet offset + gap so title bar stays visible above input */
   .app-content-wrap {
-    /* Fixed height: input + small gap; no env() so minimized title bar stays locked above input */
-    --chat-input-bar-height: 92px;
+    /* Fixed height: input + ~8px gap; tweak so minimized title bar sits just above message input */
+    --chat-input-bar-height: 80px;
   }
 }
 

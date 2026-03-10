@@ -128,6 +128,24 @@ export default function SlidableBottomSheet({
     [onClose]
   );
 
+  // Compute sheet vertical position.
+  // Requirement: when minimized and not being dragged, the title bar stays fixed above the
+  // message input and does NOT move at all unless the user drags to open.
+  let translateY = 0;
+  if (isMinimized) {
+    if (!isDraggingRef.current) {
+      // Fully minimized: lock at the bottom position (only HANDLE_HEIGHT_PX visible)
+      translateY = dragMaxDown;
+    } else {
+      // While dragging from minimized, allow moving up from the locked position
+      // dragOffsetY is negative when dragging up; clamp so we never go past fully open (0)
+      translateY = Math.max(0, dragMaxDown + dragOffsetY);
+    }
+  } else {
+    // Expanded: allow dragging down from the top
+    translateY = Math.max(0, dragOffsetY);
+  }
+
   return (
     <div
       ref={sheetRef}
@@ -140,12 +158,10 @@ export default function SlidableBottomSheet({
         "--expanded-ratio": EXPANDED_RATIO,
         "--handle-height-px": HANDLE_HEIGHT_PX,
 
-        // When minimized, the sheet's bottom is fixed (via CSS) just above the message input,
-        // and only the HANDLE_HEIGHT_PX title bar is visible. No vertical movement unless
-        // we toggle to expanded.
-        height: isMinimized ? `${HANDLE_HEIGHT_PX}px` : "100%",
-        maxHeight: isMinimized ? `${HANDLE_HEIGHT_PX}px` : "92vh",
-        transform: "translateY(0)",
+        height: "100%",
+        maxHeight: "92vh",
+
+        transform: `translateY(${Math.min(dragMaxDown, translateY)}px)`,
       }}
     >
       <div
