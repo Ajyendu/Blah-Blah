@@ -500,7 +500,7 @@ const ChatVideoPanel = () => {
       }
     };
     tick();
-    const id = setInterval(tick, 200);
+    const id = setInterval(tick, 300);
     return () => clearInterval(id);
   }, [source, hasActiveVideo, youtubeId, syncedLocalVideoUrl, localObjectUrl]);
 

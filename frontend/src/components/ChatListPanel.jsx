@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Search } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useNoteStore } from "../store/useNoteStore";
@@ -10,6 +10,7 @@ import { formatRelativeTime } from "../lib/utils";
 import "./ChatListPanel.css";
 
 const DEBOUNCE_MS = 200;
+const CHAT_REFRESH_MIN_INTERVAL_MS = 10000;
 
 const ChatListPanel = () => {
   const { chats, getMyChats, selectedChat, setSelectedChat, unreadCountByChatId } = useChatStore();
@@ -19,6 +20,20 @@ const ChatListPanel = () => {
   const [showNewChat, setShowNewChat] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const lastRefreshAtRef = useRef(0);
+
+  const refreshChatsIfNeeded = useCallback(
+    (force = false) => {
+      if (!authUser?._id) return;
+      const now = Date.now();
+      if (!force && now - lastRefreshAtRef.current < CHAT_REFRESH_MIN_INTERVAL_MS) {
+        return;
+      }
+      lastRefreshAtRef.current = now;
+      getMyChats();
+    },
+    [authUser?._id, getMyChats],
+  );
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), DEBOUNCE_MS);
@@ -26,23 +41,23 @@ const ChatListPanel = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (authUser?._id) getMyChats();
-  }, [getMyChats, authUser?._id]);
+    refreshChatsIfNeeded(true);
+  }, [refreshChatsIfNeeded]);
 
   useEffect(() => {
     const onFocus = () => {
-      if (authUser?._id) getMyChats();
+      refreshChatsIfNeeded(false);
     };
     window.addEventListener("focus", onFocus);
     const onVisibility = () => {
-      if (document.visibilityState === "visible" && authUser?._id) getMyChats();
+      if (document.visibilityState === "visible") refreshChatsIfNeeded(false);
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [getMyChats, authUser?._id]);
+  }, [refreshChatsIfNeeded]);
 
   const filteredChats = useMemo(() => {
     if (!Array.isArray(chats)) return [];

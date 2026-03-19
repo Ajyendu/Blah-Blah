@@ -2,8 +2,10 @@
 
 .app-shell {
   background: var(--page-bg, #f1f5f9);
-  /* Let browser shrink/expand height with mobile keyboard (visual viewport) */
+  /* Keep app locked to viewport so message scrolling doesn't move the whole page */
+  height: 100dvh;
   min-height: 100dvh;
+  overflow: hidden;
 }
 
 /* Main card: holds sidebar + chat block; uses theme dark bg */
@@ -72,7 +74,7 @@
 
 /* When panel is minimized on mobile: last message just above the panel title bar, 2px gap */
 .app-content-wrap.bottom-sheet-peek-visible .chat-container-ref {
-  padding-bottom: calc(100px + 2px); /* title bar height (handle) + minimal gap */
+  padding-bottom: 40px; /* minimized now uses floating bubble, keep normal chat spacing */
 }
 
 .chat-container-ref {

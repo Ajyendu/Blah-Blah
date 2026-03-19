@@ -30,7 +30,7 @@ const Sidebar = () => {
 
   const handleNavClick = (id) => {
     if (id === "profile") navigate("/profile");
-    if (id === "edit") navigate("/settings");
+    if (id === "edit") return; // keep icon visible, page removed
     if (id === "friends") navigate("/friends");
     if (id === "all") navigate("/");
   };

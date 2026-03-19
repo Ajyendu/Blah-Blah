@@ -1,10 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Minus, Pencil, StickyNote, MonitorPlay, Gamepad2 } from "lucide-react";
 import "./SlidableBottomSheet.css";
-
-const EXPANDED_RATIO = 0.85; // slide stops at 85% of height from top when expanded
-const SNAP_THRESHOLD_PX = 48;
-const HANDLE_HEIGHT_PX = 100; // when minimized, only this much (handle) visible
 
 export default function SlidableBottomSheet({
   children,
@@ -13,96 +9,76 @@ export default function SlidableBottomSheet({
   onClose,
   peekLabel,
 }) {
-  const sheetRef = useRef(null);
-  const [dragOffsetY, setDragOffsetY] = useState(0);
-  const [dragMaxDown, setDragMaxDown] = useState(0);
-  const dragMaxDownRef = useRef(0);
-  const dragStartY = useRef(0);
-  const dragStartMinimized = useRef(false);
-  const didDragRef = useRef(false);
-  const isDraggingRef = useRef(false);
-  const lastDragOffsetRef = useRef(0);
-  /* Start from bottom when opening so panel emerges from bottom; reset when minimized */
-  const [isEntrance, setIsEntrance] = useState(() => !isMinimized);
-  const mountedRef = useRef(true);
+  const normalizedLabel = String(peekLabel || "").toLowerCase();
+  const BubbleIcon =
+    normalizedLabel.includes("draw")
+      ? Pencil
+      : normalizedLabel.includes("note")
+      ? StickyNote
+      : normalizedLabel.includes("watch")
+      ? MonitorPlay
+      : normalizedLabel.includes("truth") || normalizedLabel.includes("dare")
+      ? Gamepad2
+      : Minus;
+
+  const [bubblePos, setBubblePos] = useState({ x: 0, y: 0 });
+  const bubbleDragRef = useRef({
+    active: false,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    startLeft: 0,
+    startTop: 0,
+    moved: false,
+  });
 
   useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
+    // Default bubble position near bottom-right, above nav/input area.
+    const x = Math.max(12, window.innerWidth - 72);
+    const y = Math.max(12, window.innerHeight - 220);
+    setBubblePos({ x, y });
+  }, []);
+
+  const handleBubblePointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    const y = e.clientY ?? 0;
+    const x = e.clientX ?? 0;
+    bubbleDragRef.current = {
+      active: true,
+      pointerId: e.pointerId,
+      startX: x,
+      startY: y,
+      startLeft: bubblePos.x,
+      startTop: bubblePos.y,
+      moved: false,
     };
-  }, []);
+    if (e.currentTarget?.setPointerCapture) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  }, [bubblePos.x, bubblePos.y]);
 
   useEffect(() => {
-    if (!isMinimized && isEntrance) {
-      const id1 = requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (mountedRef.current) setIsEntrance(false);
-        });
-      });
-      return () => cancelAnimationFrame(id1);
-    }
-    if (isMinimized) setIsEntrance(true);
-  }, [isMinimized, isEntrance]);
-
-  const handlePointerDown = useCallback(
-    (e) => {
-      if (e.button !== 0 && e.type !== "touchstart") return;
-      e.preventDefault();
-      didDragRef.current = false;
-      const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-      dragStartY.current = y;
-      dragStartMinimized.current = isMinimized;
-      isDraggingRef.current = true;
-      if (sheetRef.current) {
-        const sheetHeight = sheetRef.current.getBoundingClientRect().height;
-
-        const maxDown = Math.max(0, sheetHeight - HANDLE_HEIGHT_PX);
-        dragMaxDownRef.current = maxDown;
-        setDragMaxDown(maxDown);
-      } else {
-        dragMaxDownRef.current = 0;
-        setDragMaxDown(0);
+    const onMove = (e) => {
+      const drag = bubbleDragRef.current;
+      if (!drag.active) return;
+      const x = e.clientX ?? 0;
+      const y = e.clientY ?? 0;
+      const dx = x - drag.startX;
+      const dy = y - drag.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        bubbleDragRef.current.moved = true;
       }
-      if (e.target && typeof e.target.setPointerCapture === "function") {
-        e.target.setPointerCapture(e.pointerId);
+      const nextX = Math.max(8, Math.min(window.innerWidth - 56, drag.startLeft + dx));
+      const nextY = Math.max(8, Math.min(window.innerHeight - 56, drag.startTop + dy));
+      setBubblePos({ x: nextX, y: nextY });
+    };
+    const onUp = (e) => {
+      const drag = bubbleDragRef.current;
+      if (!drag.active) return;
+      if (drag.pointerId != null && e.pointerId === drag.pointerId) {
+        bubbleDragRef.current.active = false;
       }
-    },
-    [isMinimized]
-  );
-
-  const handlePointerMove = useCallback((e) => {
-    if (!isDraggingRef.current) return;
-    const maxDown = dragMaxDownRef.current;
-    const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-    let delta = y - dragStartY.current;
-    if (dragStartMinimized.current) {
-      delta = Math.max(-maxDown, Math.min(0, delta));
-    } else {
-      delta = Math.max(0, Math.min(delta, maxDown));
-    }
-    lastDragOffsetRef.current = delta;
-    setDragOffsetY(delta);
-  }, []);
-
-  const handlePointerUp = useCallback(() => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    const offset = lastDragOffsetRef.current;
-    setDragOffsetY(0);
-    if (Math.abs(offset) >= SNAP_THRESHOLD_PX) {
-      didDragRef.current = true;
-      if (!dragStartMinimized.current && offset > 0) {
-        onMinimizedChange(true);
-      } else if (dragStartMinimized.current && offset < 0) {
-        onMinimizedChange(false);
-      }
-    }
-  }, [onMinimizedChange]);
-
-  useEffect(() => {
-    const onMove = (e) => handlePointerMove(e);
-    const onUp = () => handlePointerUp();
+    };
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
@@ -111,14 +87,7 @@ export default function SlidableBottomSheet({
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [handlePointerMove, handlePointerUp]);
-
-  const handlePeekClick = useCallback(() => {
-    if (didDragRef.current) return;
-    if (isMinimized) {
-      onMinimizedChange(false);
-    }
-  }, [isMinimized, onMinimizedChange]);
+  }, []);
 
   const handleCloseClick = useCallback(
     (e) => {
@@ -128,74 +97,73 @@ export default function SlidableBottomSheet({
     [onClose]
   );
 
-  // Compute sheet vertical position.
-  // Requirement: when minimized and not being dragged, the title bar stays fixed above the
-  // message input and does NOT move at all unless the user drags to open.
-  let translateY = 0;
-  if (isMinimized) {
-    if (!isDraggingRef.current) {
-      // Fully minimized: lock at the bottom position (only HANDLE_HEIGHT_PX visible)
-      translateY = dragMaxDown;
-    } else {
-      // While dragging from minimized, allow moving up from the locked position
-      // dragOffsetY is negative when dragging up; clamp so we never go past fully open (0)
-      translateY = Math.max(0, dragMaxDown + dragOffsetY);
+  const handleMinimizeClick = useCallback((e) => {
+    e.stopPropagation();
+    onMinimizedChange(true);
+  }, [onMinimizedChange]);
+
+  const handleBubbleClick = useCallback(() => {
+    if (bubbleDragRef.current.moved) {
+      bubbleDragRef.current.moved = false;
+      return;
     }
-  } else {
-    // Expanded: allow dragging down from the top
-    translateY = Math.max(0, dragOffsetY);
+    onMinimizedChange(false);
+  }, [onMinimizedChange]);
+
+  if (isMinimized) {
+    return (
+      <button
+        type="button"
+        className="slidable-bottom-sheet__bubble"
+        style={{ left: `${bubblePos.x}px`, top: `${bubblePos.y}px` }}
+        onPointerDown={handleBubblePointerDown}
+        onClick={handleBubbleClick}
+        aria-label={`Open ${peekLabel}`}
+        title={`Open ${peekLabel}`}
+      >
+        <BubbleIcon size={20} />
+      </button>
+    );
   }
 
   return (
     <div
-      ref={sheetRef}
-      className={`slidable-bottom-sheet ${
-        isMinimized
-          ? "slidable-bottom-sheet--minimized"
-          : "slidable-bottom-sheet--expanded"
-      } ${dragOffsetY !== 0 ? "slidable-bottom-sheet--dragging" : ""}`}
+      className="slidable-bottom-sheet slidable-bottom-sheet--expanded"
       style={{
-        "--expanded-ratio": EXPANDED_RATIO,
-        "--handle-height-px": HANDLE_HEIGHT_PX,
-
         height: "100%",
         maxHeight: "92vh",
-
-        transform: `translateY(${Math.min(dragMaxDown, translateY)}px)`,
+        transform: "translateY(0)",
       }}
     >
       <div
         className="slidable-bottom-sheet__handle"
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onClick={handlePeekClick}
-        role="button"
-        tabIndex={0}
-        aria-label={
-          isMinimized ? `Expand ${peekLabel}` : "Drag down to minimize"
-        }
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handlePeekClick();
-          }
-        }}
+        role="heading"
+        aria-level={2}
       >
         <span className="slidable-bottom-sheet__handle-left" aria-hidden />
         <span className="slidable-bottom-sheet__handle-label">{peekLabel}</span>
-        {onClose ? (
+        <div className="slidable-bottom-sheet__handle-actions">
           <button
             type="button"
-            className="slidable-bottom-sheet__close"
-            onClick={handleCloseClick}
-            aria-label={`Close ${peekLabel}`}
+            className="slidable-bottom-sheet__minimize"
+            onClick={handleMinimizeClick}
+            aria-label={`Minimize ${peekLabel}`}
           >
-            <X size={20} />
+            <Minus size={18} />
           </button>
-        ) : (
-          <span className="slidable-bottom-sheet__handle-right" aria-hidden />
-        )}
+          {onClose ? (
+            <button
+              type="button"
+              className="slidable-bottom-sheet__close"
+              onClick={handleCloseClick}
+              aria-label={`Close ${peekLabel}`}
+            >
+              <X size={20} />
+            </button>
+          ) : (
+            <span className="slidable-bottom-sheet__handle-right" aria-hidden />
+          )}
+        </div>
       </div>
       <div className="slidable-bottom-sheet__content">{children}</div>
     </div>

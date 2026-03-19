@@ -20,7 +20,6 @@ import { useNoteStore } from "./store/useNoteStore";
 import { useGameStore } from "./store/useGameStore";
 import { useIsMobile } from "./hooks/useMediaQuery";
 
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const FriendsPage = lazy(() => import("./pages/FriendsPage"));
 
@@ -284,13 +283,7 @@ const App = () => {
         <Route
           path="/settings"
           element={
-            authUser ? (
-              <Suspense fallback={<PageLoader />}>
-                <SettingsPage />
-              </Suspense>
-            ) : (
-              <Navigate to="/login" />
-            )
+            authUser ? <Navigate to="/" replace /> : <Navigate to="/login" />
           }
         />
         <Route

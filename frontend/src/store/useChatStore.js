@@ -5,9 +5,12 @@ import { useAuthStore } from "./useAuthStore";
 import { useNoteStore } from "./useNoteStore";
 import { useGameStore } from "./useGameStore";
 let listenersAttached = false;
+const INITIAL_MESSAGES_LIMIT = 30;
 
 export const useChatStore = create((set, get) => ({
   messages: [],
+  /** conversationId -> cached messages for instant render on chat switch */
+  messagesByChatId: {},
   users: [],
   selectedUser: null,
   isUsersLoading: false,
@@ -204,12 +207,17 @@ export const useChatStore = create((set, get) => ({
       const selectedUser = chat.participants.find(
         (u) => u._id !== useAuthStore.getState().authUser._id,
       );
+      const chatId = chat?._id != null ? String(chat._id) : null;
+      const cachedMessages =
+        chatId && Array.isArray(state.messagesByChatId?.[chatId])
+          ? state.messagesByChatId[chatId]
+          : [];
       const nextUnread = { ...state.unreadCountByChatId };
       if (chat?._id) delete nextUnread[chat._id];
       return {
         selectedChat: chat,
         selectedUser,
-        messages: [],
+        messages: cachedMessages,
         unreadCountByChatId: nextUnread,
       };
     });
@@ -247,9 +255,16 @@ export const useChatStore = create((set, get) => ({
           typeof messageId === "object" && messageId?.toString
             ? messageId.toString()
             : String(messageId);
-        set((state) => ({
-          messages: state.messages.filter((m) => String(m._id) !== idStr),
-        }));
+        set((state) => {
+          const nextMessages = state.messages.filter((m) => String(m._id) !== idStr);
+          const selectedId = state.selectedChat?._id != null ? String(state.selectedChat._id) : null;
+          return {
+            messages: nextMessages,
+            messagesByChatId: selectedId
+              ? { ...state.messagesByChatId, [selectedId]: nextMessages }
+              : state.messagesByChatId,
+          };
+        });
       }
     } catch (err) {
       console.error(err);
@@ -262,23 +277,33 @@ export const useChatStore = create((set, get) => ({
       set({ messages: [], hasMoreOlderMessages: false });
       return;
     }
-
-    set({ isMessagesLoading: true });
+    const chatId = String(conversationId);
+    const cached = get().messagesByChatId?.[chatId];
+    const hasCached = Array.isArray(cached) && cached.length > 0;
+    if (hasCached) {
+      set({ messages: cached, isMessagesLoading: false });
+    } else {
+      set({ isMessagesLoading: true });
+    }
     try {
     const res = await axiosInstance.get(
       `/messages/conversation/${conversationId}`,
-        { params: { limit: 50 } },
+        { params: { limit: INITIAL_MESSAGES_LIMIT } },
       );
 
       const data = res.data || {};
       const messageList = Array.isArray(data) ? data : (data.messages || []);
       const hasMore = data.hasMore === true;
 
-      set({
+      set((state) => ({
         messages: messageList,
         hasMoreOlderMessages: hasMore,
         isMessagesLoading: false,
-      });
+        messagesByChatId: {
+          ...state.messagesByChatId,
+          [chatId]: messageList,
+        },
+      }));
 
       const lastInChat =
         messageList.length > 0 ? messageList[messageList.length - 1] : null;
@@ -290,22 +315,8 @@ export const useChatStore = create((set, get) => ({
       ),
     }));
 
-    // Mark as seen only when tab is visible to the user
-    if (
-      typeof document !== "undefined" &&
-      document.visibilityState !== "visible"
-    )
-      return;
-    const authUser = useAuthStore.getState().authUser;
-    const socket = useAuthStore.getState().socket;
-    if (authUser?._id && socket) {
-      socket.emit("chat_opened", {
-        chatId: conversationId,
-        userId: authUser._id,
-      });
-      }
     } catch (err) {
-      set({ messages: [], isMessagesLoading: false });
+      set({ isMessagesLoading: false });
     }
   },
 
@@ -329,6 +340,10 @@ export const useChatStore = create((set, get) => ({
         messages: [...olderList, ...s.messages],
         hasMoreOlderMessages: hasMore,
         isMessagesLoadingMore: false,
+        messagesByChatId: {
+          ...s.messagesByChatId,
+          [String(conversationId)]: [...olderList, ...s.messages],
+        },
       }));
     } catch (err) {
       set({ isMessagesLoadingMore: false });
@@ -392,11 +407,18 @@ export const useChatStore = create((set, get) => ({
   },
 
   markMessageRevealed: (messageId) =>
-    set((state) => ({
-      messages: state.messages.map((m) =>
+    set((state) => {
+      const nextMessages = state.messages.map((m) =>
         m._id === messageId ? { ...m, revealed: true } : m,
-      ),
-    })),
+      );
+      const selectedId = state.selectedChat?._id != null ? String(state.selectedChat._id) : null;
+      return {
+        messages: nextMessages,
+        messagesByChatId: selectedId
+          ? { ...state.messagesByChatId, [selectedId]: nextMessages }
+          : state.messagesByChatId,
+      };
+    }),
 
   subscribeToMessages: () => {
     const socket = useAuthStore.getState().socket;
@@ -473,6 +495,13 @@ export const useChatStore = create((set, get) => ({
             : state.messages,
           unreadCountByChatId: nextUnread,
           chats: nextChats,
+          messagesByChatId:
+            isForCurrentChat && msg.chatId
+              ? {
+                  ...state.messagesByChatId,
+                  [String(msg.chatId)]: [...state.messages, msg],
+                }
+              : state.messagesByChatId,
         };
       });
       // When chat is visible (tab in focus) and message is for me in current chat, mark as seen
