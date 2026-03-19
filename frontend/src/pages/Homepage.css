@@ -2,6 +2,8 @@
 
 .app-shell {
   background: var(--page-bg, #f1f5f9);
+  /* Let browser shrink/expand height with mobile keyboard (visual viewport) */
+  min-height: 100dvh;
 }
 
 /* Main card: holds sidebar + chat block; uses theme dark bg */

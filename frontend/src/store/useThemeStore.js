@@ -91,6 +91,8 @@ const DARK_THEME = {
 
 const STORAGE_KEY = "blah-blah-theme";
 const BACKUP_KEY = "blah-blah-theme-before-reset";
+let persistTimer = null;
+let lastPersistedThemeKey = "";
 
 const loadTheme = () => {
   try {
@@ -113,12 +115,20 @@ const loadBackup = () => {
   return null;
 };
 
-const persistThemeToServer = async (theme) => {
-  try {
-    await axiosInstance.put("/auth/update-profile", { theme });
-  } catch (_) {
-    // Ignore network errors; theme will still be applied locally
-  }
+const persistThemeToServer = (theme) => {
+  // Debounce backend writes to avoid flooding requests while user tweaks settings.
+  if (!theme) return;
+  const themeKey = JSON.stringify(theme);
+  if (themeKey === lastPersistedThemeKey) return;
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(async () => {
+    try {
+      await axiosInstance.put("/auth/update-profile", { theme });
+      lastPersistedThemeKey = themeKey;
+    } catch (_) {
+      // Ignore network errors; theme will still be applied locally
+    }
+  }, 350);
 };
 
 export const useThemeStore = create((set, get) => ({

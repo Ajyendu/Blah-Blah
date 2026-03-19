@@ -69,6 +69,7 @@ const ChatVideoPanel = () => {
   const resizeStartWidth = useRef(0);
   const [controlsVisible, setControlsVisible] = useState(true);
   const controlsTimeoutRef = useRef(null);
+  const lastControlsActivityRef = useRef(0);
 
   const handleResizeStart = useCallback((e) => {
     e.preventDefault();
@@ -254,7 +255,11 @@ const ChatVideoPanel = () => {
 
   const bumpControlsVisible = useCallback(() => {
     if (!hasActiveVideo) return;
-    setControlsVisible(true);
+    const now = Date.now();
+    // Pointer move can fire very often; throttle to reduce re-renders.
+    if (isMobile && now - lastControlsActivityRef.current < 180) return;
+    lastControlsActivityRef.current = now;
+    setControlsVisible((v) => (v ? v : true));
     if (!isMobile) return;
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {

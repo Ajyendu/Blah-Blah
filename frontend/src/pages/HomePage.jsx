@@ -69,7 +69,7 @@ const HomePage = ({
 
   return (
     // <div className="chat-container h-screen w-screen flex">
-    <div className="app-shell h-screen w-screen flex">
+    <div className="app-shell w-screen flex">
       <GamePlayingListener />
       {/* CHAT SHELL */}
       <div className="app-card flex flex-1 m-6 overflow-hidden">
