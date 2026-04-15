@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import cors from "cors";
 import compression from "compression";
+import { corsOptions } from "./lib/corsConfig.js";
 import cookieParser from "cookie-parser";
 import path from "path";
 import express from "express";
@@ -26,21 +27,17 @@ const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
 /* ================= MIDDLEWARE ================= */
-// CORS first so OPTIONS preflight always gets headers (Render 502/error pages omit them).
+// CORS first. Preview URLs (e.g. *.vercel.app) are whitelisted in corsConfig.
+app.use(cors(corsOptions));
+// Do not compress OPTIONS — some proxies/clients mishandle compressed preflights.
 app.use(
-  cors({
-    origin: true, // reflect request Origin; works with Vercel + any dev URL
-    credentials: true,
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Cookie",
-    ],
-    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  compression({
+    filter: (req, res) => {
+      if (req.method === "OPTIONS") return false;
+      return compression.filter(req, res);
+    },
   }),
 );
-app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());

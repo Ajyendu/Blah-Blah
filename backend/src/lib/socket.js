@@ -6,6 +6,7 @@ import { detectBotMention } from "./detectBot.js";
 import { generateAIReply } from "../AI/aiService.js";
 import ChatMemory from "../models/chatMemory.model.js";
 import { extractMemory } from "../AI/memoryExtractor.js";
+import { corsOriginCallback } from "./corsConfig.js";
 
 let io;
 
@@ -15,15 +16,18 @@ let io;
 const userSocketMap = new Map();
 
 export const initSocket = (server) => {
-  // Match Express (index.js): reflect request Origin. A strict allowlist here broke prod when
-  // FRONTEND_URL/CORS_ORIGINS omitted the live Vercel URL or used a trailing-slash mismatch.
   io = new Server(server, {
     path: "/socket.io",
     maxHttpBufferSize: 5e6, // 5MB for drawing canvas state
     cors: {
-      origin: true,
+      origin: corsOriginCallback,
       credentials: true,
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Cookie",
+      ],
     },
   });
 
