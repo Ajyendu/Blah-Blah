@@ -80,9 +80,11 @@ const ChatHeader = ({
     ? "Request rejected"
     : isRequestSent
       ? "Request sent"
-      : isPendingChat
-        ? ""
-        : isOnline
+      : isReceiverPending
+        ? "Accept or reject to chat"
+        : isPendingChat
+          ? ""
+          : isOnline
           ? "Online"
           : "Offline";
   const subtitleClass = showRejected
@@ -140,7 +142,7 @@ const ChatHeader = ({
         <div className="chat-header-ref__info">
           <h1 className="chat-header-ref__title">{selectedUser.fullName}</h1>
           <p className={subtitleClass}>{subtitleText}</p>
-          {isMobile && isReceiverPending && (
+          {isReceiverPending && (
             <div className="chat-header-ref__accept-reject">
               <button
                 type="button"
