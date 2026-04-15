@@ -482,4 +482,8 @@ export const emitToUser = (userId, event, ...args) => {
   }
 };
 
+/** Live Socket.IO connections (all tabs / devices). For /metrics. */
+export const getConnectedSocketCount = () =>
+  typeof io?.engine?.clientsCount === "number" ? io.engine.clientsCount : 0;
+
 export { io };

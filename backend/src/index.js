@@ -8,8 +8,12 @@ import express from "express";
 import http from "http";
 import Message from "./models/message.model.js";
 import { connectDB } from "./lib/db.js";
-import { initSocket } from "./lib/socket.js";
-import { io } from "./lib/socket.js";
+import { initSocket, io, getConnectedSocketCount } from "./lib/socket.js";
+import {
+  recordHttp,
+  getHttpLatencyPercentilesMs,
+  getHttpCounters,
+} from "./lib/metrics.js";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import conversationRoutes from "./routes/conversation.route.js";
@@ -42,6 +46,15 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
+app.use((req, res, next) => {
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    recordHttp(ms, res.statusCode);
+  });
+  next();
+});
+
 /* ================= ROUTES ================= */
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
@@ -55,6 +68,33 @@ app.use("/api/watch-party", watchPartyRoutes);
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+const metricsAllowed = () =>
+  process.env.METRICS_ENABLED === "true" || process.env.NODE_ENV !== "production";
+
+app.get("/metrics", (req, res) => {
+  if (!metricsAllowed()) {
+    return res.status(404).json({ error: "not found" });
+  }
+  const lat = getHttpLatencyPercentilesMs();
+  const ctr = getHttpCounters();
+  const errorRate =
+    ctr.requestsTotal > 0
+      ? (ctr.responses4xx + ctr.responses5xx) / ctr.requestsTotal
+      : 0;
+  res.status(200).json({
+    uptimeSec: Math.floor(process.uptime()),
+    http: {
+      ...ctr,
+      errorRateApprox: Number(errorRate.toFixed(6)),
+      latencyMs: lat,
+    },
+    sockets: {
+      connected: getConnectedSocketCount(),
+    },
+    pid: process.pid,
+  });
 });
 
 /* ================= PROD ================= */

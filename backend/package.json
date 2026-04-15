@@ -5,7 +5,10 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "load:http": "autocannon -c 100 -d 15 --latency-metrics=true http://127.0.0.1:5000/health",
+    "load:sockets": "node scripts/socket-load-test.mjs --count 500 --url http://127.0.0.1:5000",
+    "cost:estimate": "node scripts/estimate-cost.mjs"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +30,8 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "autocannon": "^8.0.0",
+    "nodemon": "^3.1.7",
+    "socket.io-client": "^4.8.3"
   }
 }
