@@ -97,15 +97,21 @@ function startTimedMessageScheduler() {
 }
 
 /* ================= START ================= */
-server.listen(PORT, "0.0.0.0", async () => {
-  console.log(`✅ Server running on port ${PORT}`);
-
+// Connect MongoDB before listening so Render never routes traffic to a dying process,
+// and /health only matters after DB is ready (avoids flaky 502s right after deploy).
+async function start() {
   try {
     await connectDB();
-    startTimedMessageScheduler();
-    console.log("⏰ Timed message scheduler started");
   } catch (err) {
-    console.error("❌ Failed to start server:", err);
+    console.error("❌ MongoDB connection failed:", err?.message || err);
     process.exit(1);
   }
-});
+
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Server listening on port ${PORT}`);
+    startTimedMessageScheduler();
+    console.log("⏰ Timed message scheduler started");
+  });
+}
+
+start();
