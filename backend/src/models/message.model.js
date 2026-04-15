@@ -68,6 +68,7 @@ const messageSchema = new mongoose.Schema(
 
 messageSchema.index({ chatId: 1, createdAt: -1 });
 messageSchema.index({ chatId: 1, receiverId: 1, seen: 1 });
+messageSchema.index({ revealed: 1, revealAt: 1, deleted: 1 });
 
 const Message = mongoose.model("Message", messageSchema);
 

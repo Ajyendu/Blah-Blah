@@ -18,5 +18,20 @@ export default defineConfig(async ({ command }) => {
       host: true,
       port: 8080,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (id.includes("react-dom") || id.includes("/react/")) {
+                return "react-vendor";
+              }
+              if (id.includes("recharts")) return "charts";
+              if (id.includes("socket.io-client")) return "socket";
+            }
+          },
+        },
+      },
+    },
   };
 });

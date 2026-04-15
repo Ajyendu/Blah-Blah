@@ -15,27 +15,37 @@ let io;
 const userSocketMap = new Map();
 
 export const initSocket = (server) => {
-  const allowedOrigins = [
+  // Match Express in index.js: reflect request Origin (works with any deployed frontend).
+  // Set CORS_ORIGINS="https://a.com,https://b.com" for an explicit allowlist instead.
+  const fromEnv = [
+    ...(process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(",").map((o) => o.trim()).filter(Boolean)
+      : []),
+    ...(process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+      : []),
+  ];
+  const localhostOrigins = [
     "http://localhost:8081",
     "https://localhost:8081",
     "http://localhost:8080",
-    "https://localhost:8080", // Vite dev with HTTPS (mkcert)
+    "https://localhost:8080",
     "http://localhost:5050",
-    "http://localhost:5173", // Vite dev
-    ...(process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(",")
-          .map((o) => o.trim())
-          .filter(Boolean)
-      : []),
+    "http://localhost:5173",
   ];
+  const explicitAllowlist = [...new Set([...localhostOrigins, ...fromEnv])];
+  const useAllowlist = explicitAllowlist.length > localhostOrigins.length;
+
   io = new Server(server, {
     path: "/socket.io",
     maxHttpBufferSize: 5e6, // 5MB for drawing canvas state
     cors: {
-      origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-        return cb(null, false);
-      },
+      origin: useAllowlist
+        ? (origin, cb) => {
+            if (!origin || explicitAllowlist.includes(origin)) return cb(null, true);
+            return cb(null, false);
+          }
+        : true,
       credentials: true,
     },
   });

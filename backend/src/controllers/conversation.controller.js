@@ -123,6 +123,10 @@ export const removeFriend = async (req, res) => {
 
 export const getMyChats = async (req, res) => {
   const userId = req.user._id;
+  const userOid =
+    userId instanceof mongoose.Types.ObjectId
+      ? userId
+      : new mongoose.Types.ObjectId(userId);
 
   const chats = await Conversation.find({
     participants: userId,
@@ -132,58 +136,69 @@ export const getMyChats = async (req, res) => {
     .limit(50)
     .lean();
 
-  const normalized = await Promise.all(
-    chats.map(async (doc) => {
-      const lastVisible = await Message.findOne({
-        chatId: doc._id,
-        $or: [
-          { visibleTo: { $size: 0 } },
-          { visibleTo: userId },
-        ],
-        deletedFor: { $nin: [userId] },
-      })
-        .sort({ createdAt: -1 })
-        .limit(1)
-        .lean();
-      let lastMessage = lastVisible || null;
-      if (lastMessage && Array.isArray(lastMessage.deletedFor)) {
-        const deletedForMe = lastMessage.deletedFor.some(
-          (id) => id && String(id) === String(userId),
-        );
-        if (deletedForMe) lastMessage = null;
-      }
-      if (lastMessage) {
-        lastMessage = {
-          ...lastMessage,
-          text: lastMessage.text != null ? decrypt(lastMessage.text) : lastMessage.text,
-          fileName: lastMessage.fileName != null && lastMessage.fileName !== "" ? decrypt(lastMessage.fileName) : lastMessage.fileName,
-        };
-      }
-      return {
-        ...doc,
-        lastMessage,
+  if (!chats.length) {
+    return res.json([]);
+  }
+
+  const chatIds = chats.map((c) => c._id);
+  const visibilityMatch = {
+    chatId: { $in: chatIds },
+    $or: [
+      { visibleTo: { $size: 0 } },
+      { visibleTo: userOid },
+    ],
+    deletedFor: { $nin: [userOid] },
+  };
+
+  // One aggregation replaces per-chat findOne + countDocuments (was up to 100 queries).
+  const lastByChat = await Message.aggregate([
+    { $match: visibilityMatch },
+    { $sort: { createdAt: -1 } },
+    {
+      $group: {
+        _id: "$chatId",
+        doc: { $first: "$$ROOT" },
+      },
+    },
+  ]);
+
+  const lastMap = new Map(
+    lastByChat.map((row) => [String(row._id), row.doc]),
+  );
+
+  const visibleChats = [];
+
+  for (const doc of chats) {
+    const cid = String(doc._id);
+    const lastRaw = lastMap.get(cid);
+    if (!lastRaw) continue;
+
+    let lastMessage = { ...lastRaw };
+    if (lastMessage && Array.isArray(lastMessage.deletedFor)) {
+      const deletedForMe = lastMessage.deletedFor.some(
+        (id) => id && String(id) === String(userId),
+      );
+      if (deletedForMe) lastMessage = null;
+    }
+    if (lastMessage) {
+      lastMessage = {
+        ...lastMessage,
+        text:
+          lastMessage.text != null ? decrypt(lastMessage.text) : lastMessage.text,
+        fileName:
+          lastMessage.fileName != null && lastMessage.fileName !== ""
+            ? decrypt(lastMessage.fileName)
+            : lastMessage.fileName,
       };
-    }),
-  );
+    }
 
-  // Don't show conversations with no messages visible to me (same visibility as getMessagesByConversation)
-  const visibleChats = await Promise.all(
-    normalized.map(async (doc) => {
-      const cid = doc._id;
-      const visibleToMe = await Message.countDocuments({
-        chatId: new mongoose.Types.ObjectId(cid),
-        $or: [
-          { visibleTo: { $size: 0 } },
-          { visibleTo: userId },
-        ],
-        deletedFor: { $nin: [new mongoose.Types.ObjectId(userId)] },
-      });
-      if (visibleToMe === 0) return null;
-      return doc;
-    }),
-  );
+    visibleChats.push({
+      ...doc,
+      lastMessage,
+    });
+  }
 
-  res.json(visibleChats.filter(Boolean));
+  res.json(visibleChats);
 };
 
 /** All accepted conversations (friends) — no message-count filter. Used for Friends panel only. */

@@ -99,14 +99,6 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Account created successfully");
 
       get().connectSocket();
-
-      // Re-fetch user from server so profile has latest gender/profilePic
-      try {
-        const checkRes = await axiosInstance.get("/auth/check", {
-          withCredentials: true,
-        });
-        if (checkRes.data) set({ authUser: checkRes.data });
-      } catch (_) {}
     } catch (error) {
       toast.error(error.response?.data?.message || "Signup failed");
     } finally {
