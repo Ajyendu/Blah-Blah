@@ -26,17 +26,24 @@ const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
 /* ================= MIDDLEWARE ================= */
+// CORS first so OPTIONS preflight always gets headers (Render 502/error pages omit them).
+app.use(
+  cors({
+    origin: true, // reflect request Origin; works with Vercel + any dev URL
+    credentials: true,
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Cookie",
+    ],
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  }),
+);
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
-
-app.use(
-  cors({
-    origin: true, // 🔥 allow any origin (DEV ONLY)
-    credentials: true,
-  }),
-);
 
 /* ================= ROUTES ================= */
 app.use("/api/auth", authRoutes);

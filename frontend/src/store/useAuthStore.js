@@ -205,6 +205,10 @@ export const useAuthStore = create((set, get) => ({
       "http://localhost:5050";
     const socket = io(backendUrl, {
       auth: { token },
+      // WebSocket first: fewer long-polling XHRs (each can hit Render cold-start 502s that look like “CORS”).
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 12,
+      reconnectionDelay: 1000,
     });
 
     window.socket = socket;
