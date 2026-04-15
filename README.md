@@ -73,26 +73,29 @@ Blah Blah is a **split frontend/backend** project: a **React + Vite** client and
 
 ## Application gallery
 
-Screenshots live in the **`Photos/`** folder. Paths below are URL-encoded for spaces (GitHub-safe).
+Screenshots are stored as **`Photos/gallery-01.png`** … **`gallery-09.png`** (simple names so GitHub can resolve them). macOS default screenshot names use a special Unicode space before `PM`, which breaks normal URL encoding in READMEs.
 
 <div align="center">
 
 <table>
 <tr>
-<td><img src="Photos/Screenshot%202026-04-15%20at%207.50.10%20PM.png" width="400" alt="Blah Blah screenshot 1"/></td>
-<td><img src="Photos/Screenshot%202026-04-15%20at%207.50.33%20PM.png" width="400" alt="Blah Blah screenshot 2"/></td>
+<td><img src="Photos/gallery-01.png" width="400" alt="Blah Blah screenshot 1"/></td>
+<td><img src="Photos/gallery-02.png" width="400" alt="Blah Blah screenshot 2"/></td>
 </tr>
 <tr>
-<td><img src="Photos/Screenshot%202026-04-15%20at%207.56.25%20PM.png" width="400" alt="Blah Blah screenshot 3"/></td>
-<td><img src="Photos/Screenshot%202026-04-15%20at%208.03.10%20PM.png" width="400" alt="Blah Blah screenshot 4"/></td>
+<td><img src="Photos/gallery-03.png" width="400" alt="Blah Blah screenshot 3"/></td>
+<td><img src="Photos/gallery-04.png" width="400" alt="Blah Blah screenshot 4"/></td>
 </tr>
 <tr>
-<td><img src="Photos/Screenshot%202026-04-15%20at%208.03.24%20PM.png" width="400" alt="Blah Blah screenshot 5"/></td>
-<td><img src="Photos/Screenshot%202026-04-15%20at%208.03.36%20PM.png" width="400" alt="Blah Blah screenshot 6"/></td>
+<td><img src="Photos/gallery-05.png" width="400" alt="Blah Blah screenshot 5"/></td>
+<td><img src="Photos/gallery-06.png" width="400" alt="Blah Blah screenshot 6"/></td>
 </tr>
 <tr>
-<td><img src="Photos/Screenshot%202026-04-15%20at%208.04.12%20PM.png" width="400" alt="Blah Blah screenshot 7"/></td>
-<td><img src="Photos/Screenshot%202026-04-15%20at%208.05.16%20PM.png" width="400" alt="Blah Blah screenshot 8"/></td>
+<td><img src="Photos/gallery-07.png" width="400" alt="Blah Blah screenshot 7"/></td>
+<td><img src="Photos/gallery-08.png" width="400" alt="Blah Blah screenshot 8"/></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="Photos/gallery-09.png" width="400" alt="Blah Blah screenshot 9"/></td>
 </tr>
 </table>
 
