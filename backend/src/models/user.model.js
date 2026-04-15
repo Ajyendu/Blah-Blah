@@ -29,11 +29,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    gender: {
-      type: String,
-      enum: ["male", "female"],
-      default: "",
-    },
 
     // Per-account UI theme (bright mode by default; stored per user)
     theme: {

@@ -2,10 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Pencil, Copy, Check, Share2 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { useAuthStore } from "../store/useAuthStore.js";
-import {
-  DEFAULT_AVATAR_URL,
-  getDefaultAvatarByGender,
-} from "../lib/defaultAvatar.js";
+import { getDefaultAnimalAvatar } from "../lib/defaultAvatar.js";
 import toast from "react-hot-toast";
 import "./Homepage.css";
 import "./ProfilePage.css";
@@ -23,7 +20,6 @@ const ProfilePage = () => {
   const [editingName, setEditingName] = useState(false);
   const [firstNameValue, setFirstNameValue] = useState("");
   const [lastNameValue, setLastNameValue] = useState("");
-  const [genderValue, setGenderValue] = useState("male");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -34,10 +30,6 @@ const ProfilePage = () => {
     }
   }, [authUser?.fullName, editingName]);
 
-  useEffect(() => {
-    if (authUser?.gender) setGenderValue(authUser.gender);
-  }, [authUser?.gender]);
-
   const handleSaveName = useCallback(() => {
     setEditingName(false);
     const first = firstNameValue?.trim() ?? "";
@@ -46,26 +38,16 @@ const ProfilePage = () => {
     const updates = {};
     if (fullName && fullName !== authUser?.fullName)
       updates.fullName = fullName;
-    if (genderValue && genderValue !== authUser?.gender)
-      updates.gender = genderValue;
     if (Object.keys(updates).length === 0) return;
     updateProfile(updates);
-  }, [
-    firstNameValue,
-    lastNameValue,
-    genderValue,
-    authUser?.fullName,
-    authUser?.gender,
-    updateProfile,
-  ]);
+  }, [firstNameValue, lastNameValue, authUser?.fullName, updateProfile]);
 
   const handleStartEditName = useCallback(() => {
     const { first, last } = splitName(authUser?.fullName ?? "");
     setFirstNameValue(first);
     setLastNameValue(last);
-    setGenderValue(authUser?.gender || "male");
     setEditingName(true);
-  }, [authUser?.fullName, authUser?.gender]);
+  }, [authUser?.fullName]);
 
   const handleAvatarClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -152,23 +134,14 @@ const ProfilePage = () => {
 
   const { first: firstName, last: lastName } = splitName(authUser.fullName);
 
-  // Use profilePic if set; else fallback to gender-based default so boy/girl avatar shows
   const rawAvatar =
     authUser.profilePic && authUser.profilePic.trim()
       ? authUser.profilePic
-      : getDefaultAvatarByGender(authUser.gender, authUser._id);
-  // Use full URL for path-only avatars so they load reliably (e.g. /Boy1.jpeg)
+      : getDefaultAnimalAvatar(authUser._id);
   const displayAvatar =
     typeof rawAvatar === "string" && rawAvatar.startsWith("/")
       ? `${window.location.origin}${rawAvatar}`
       : rawAvatar;
-
-  const genderLabel =
-    authUser.gender === "male"
-      ? "Male"
-      : authUser.gender === "female"
-        ? "Female"
-        : "—";
 
   return (
     <div className="profile-page-shell app-shell h-screen w-screen flex">
@@ -302,37 +275,6 @@ const ProfilePage = () => {
                       <div className="profile-field-value profile-field-value--readonly">
                         {authUser.email || "—"}
                       </div>
-                    </div>
-                    <div className="profile-field-item">
-                      <label className="profile-field-label">Gender</label>
-                      {editingName ? (
-                        <div className="profile-field-radios">
-                          <label className="profile-field-radio-label">
-                            <input
-                              type="radio"
-                              name="profile-gender"
-                              value="male"
-                              checked={genderValue === "male"}
-                              onChange={(e) => setGenderValue(e.target.value)}
-                              className="profile-field-radio"
-                            />
-                            <span>Male</span>
-                          </label>
-                          <label className="profile-field-radio-label">
-                            <input
-                              type="radio"
-                              name="profile-gender"
-                              value="female"
-                              checked={genderValue === "female"}
-                              onChange={(e) => setGenderValue(e.target.value)}
-                              className="profile-field-radio"
-                            />
-                            <span>Female</span>
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="profile-field-value">{genderLabel}</div>
-                      )}
                     </div>
                   </div>
                 </section>

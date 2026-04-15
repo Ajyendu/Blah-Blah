@@ -6,29 +6,36 @@ const DEFAULT_AVATAR_SVG =
 
 export const DEFAULT_AVATAR_URL = DEFAULT_AVATAR_SVG;
 
-// Random default avatars from public folder: 4 boys, 3 girls
-export const DEFAULT_AVATARS_BOY = ["/Boy1.jpeg", "/Boy2.jpeg", "/Boy3.jpeg", "/Boy4.jpeg"];
-export const DEFAULT_AVATARS_GIRL = ["/Girl1.jpeg", "/Girl2.jpeg", "/Girl3.jpeg"];
+/** Animal profile photos (Unsplash) — keep in sync with backend `animalAvatars.js` */
+export const ANIMAL_AVATAR_URLS = [
+  "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1587300003388-59208cc9627d?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1525385133512-2f3bdd039054?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1543548789-05f6d0ae145c?w=400&h=400&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400&h=400&fit=crop&q=80",
+];
 
-/** At signup: pick one randomly from 4 boys or 3 girls by gender */
-export function getRandomAvatarByGender(gender) {
-  if (gender === "male") {
-    return DEFAULT_AVATARS_BOY[Math.floor(Math.random() * DEFAULT_AVATARS_BOY.length)];
-  }
-  if (gender === "female") {
-    return DEFAULT_AVATARS_GIRL[Math.floor(Math.random() * DEFAULT_AVATARS_GIRL.length)];
-  }
-  return DEFAULT_AVATAR_URL;
+/** New account: random animal avatar */
+export function getRandomAnimalAvatar() {
+  return ANIMAL_AVATAR_URLS[
+    Math.floor(Math.random() * ANIMAL_AVATAR_URLS.length)
+  ];
 }
 
-/** Stable default avatar by gender for profile (same user always gets same one, variety across users) */
-export function getDefaultAvatarByGender(gender, userId) {
-  const list = gender === "male" ? DEFAULT_AVATARS_BOY : gender === "female" ? DEFAULT_AVATARS_GIRL : null;
-  if (!list || list.length === 0) return DEFAULT_AVATAR_URL;
-  if (!userId) return list[0];
+/** When user has no profilePic, pick a stable animal per user id (deterministic) */
+export function getDefaultAnimalAvatar(userId) {
+  if (!ANIMAL_AVATAR_URLS.length) return DEFAULT_AVATAR_URL;
+  if (!userId) return ANIMAL_AVATAR_URLS[0];
   const str = String(userId);
   let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i);
-  const index = Math.abs(hash) % list.length;
-  return list[index];
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+  }
+  const index = Math.abs(hash) % ANIMAL_AVATAR_URLS.length;
+  return ANIMAL_AVATAR_URLS[index];
 }

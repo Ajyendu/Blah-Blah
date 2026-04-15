@@ -3,10 +3,11 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
 import generateUserCode from "../lib/generateUserCode.js";
+import { getRandomAnimalAvatarUrl } from "../lib/animalAvatars.js";
 
 // ================== SIGNUP ==================
 export const signup = async (req, res) => {
-  let { fullName, email, password, gender, profilePic } = req.body;
+  let { fullName, email, password, profilePic } = req.body;
 
   try {
     if (!fullName || !email || !password) {
@@ -17,12 +18,11 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Password too short" });
     }
 
-    gender = typeof gender === "string" ? gender.trim().toLowerCase() : "";
-    if (!gender || !["male", "female"].includes(gender)) {
-      return res.status(400).json({ message: "Please select a gender" });
+    profilePic =
+      profilePic && typeof profilePic === "string" ? profilePic.trim() : "";
+    if (!profilePic) {
+      profilePic = getRandomAnimalAvatarUrl();
     }
-
-    profilePic = profilePic && typeof profilePic === "string" ? profilePic.trim() : "";
 
     const exists = await User.findOne({ email });
     if (exists) {
@@ -47,8 +47,7 @@ export const signup = async (req, res) => {
       email,
       password: hashed,
       userCode,
-      gender,
-      profilePic: profilePic || "",
+      profilePic,
       theme: null,
     });
 
@@ -56,7 +55,7 @@ export const signup = async (req, res) => {
 
     // Re-fetch so response matches DB and includes all fields
     const saved = await User.findById(user._id)
-      .select("_id fullName email profilePic userCode gender theme")
+      .select("_id fullName email profilePic userCode theme")
       .lean();
 
     res.status(201).json({
@@ -66,7 +65,6 @@ export const signup = async (req, res) => {
         email: saved.email,
         profilePic: saved.profilePic || "",
         userCode: saved.userCode,
-        gender: saved.gender || "",
         theme: saved.theme || null,
       },
       token,
@@ -101,7 +99,6 @@ export const login = async (req, res) => {
         email: user.email,
         profilePic: user.profilePic || "",
         userCode: user.userCode,
-        gender: user.gender || "",
         theme: user.theme || null,
       },
       token,
@@ -125,7 +122,7 @@ export const checkAuth = async (req, res) => {
   }
 
   const user = await User.findById(req.user._id).select(
-    "_id fullName email profilePic userCode gender theme",
+    "_id fullName email profilePic userCode theme",
   );
 
   if (!user) {
@@ -138,23 +135,19 @@ export const checkAuth = async (req, res) => {
     email: user.email,
     profilePic: user.profilePic || "",
     userCode: user.userCode,
-    gender: user.gender || "",
     theme: user.theme || null,
   });
 };
 
 // ================== UPDATE PROFILE ==================
 export const updateProfile = async (req, res) => {
-  const { profilePic, fullName, gender, theme } = req.body;
+  const { profilePic, fullName, theme } = req.body;
   const userId = req.user._id;
 
   try {
     const updates = {};
     if (typeof fullName === "string" && fullName.trim()) {
       updates.fullName = fullName.trim();
-    }
-    if (gender === "male" || gender === "female") {
-      updates.gender = gender;
     }
     if (profilePic) {
       const upload = await cloudinary.uploader.upload(profilePic);
@@ -165,7 +158,7 @@ export const updateProfile = async (req, res) => {
     }
     if (Object.keys(updates).length === 0) {
       const user = await User.findById(userId).select(
-        "_id fullName email profilePic userCode gender theme",
+        "_id fullName email profilePic userCode theme",
       );
       return res.status(200).json(user);
     }
@@ -173,7 +166,7 @@ export const updateProfile = async (req, res) => {
       userId,
       updates,
       { new: true },
-    ).select("_id fullName email profilePic userCode gender theme");
+    ).select("_id fullName email profilePic userCode theme");
 
     return res.status(200).json(updatedUser);
   } catch (err) {

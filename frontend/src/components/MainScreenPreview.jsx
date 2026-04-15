@@ -24,7 +24,7 @@ import {
   Share2,
   Copy,
 } from "lucide-react";
-import { DEFAULT_AVATAR_URL, DEFAULT_AVATARS_BOY, DEFAULT_AVATARS_GIRL } from "../lib/defaultAvatar.js";
+import { DEFAULT_AVATAR_URL, ANIMAL_AVATAR_URLS } from "../lib/defaultAvatar.js";
 import "./Sidebar.css";
 import "./ChatListPanel.css";
 import "./ChatHeader.css";
@@ -44,13 +44,13 @@ const NAV_ITEMS = [
 ];
 
 const MOCK_CHATS = [
-  { id: "1", name: "Johnny", time: "1m", preview: "Hey", selected: true, online: true, avatar: DEFAULT_AVATARS_BOY[0] },
-  { id: "2", name: "Sam", time: "1h", preview: "See you later", selected: false, online: false, avatar: DEFAULT_AVATARS_GIRL[0] },
+  { id: "1", name: "Johnny", time: "1m", preview: "Hey", selected: true, online: true, avatar: ANIMAL_AVATAR_URLS[0] },
+  { id: "2", name: "Sam", time: "1h", preview: "See you later", selected: false, online: false, avatar: ANIMAL_AVATAR_URLS[1] },
 ];
 
 const MOCK_FRIENDS = [
-  { id: "f1", name: "Johnny", avatar: DEFAULT_AVATARS_BOY[0], online: true },
-  { id: "f2", name: "Sam", avatar: DEFAULT_AVATARS_GIRL[0], online: false },
+  { id: "f1", name: "Johnny", avatar: ANIMAL_AVATAR_URLS[0], online: true },
+  { id: "f2", name: "Sam", avatar: ANIMAL_AVATAR_URLS[1], online: false },
 ];
 
 const MOCK_MESSAGES = [
@@ -309,7 +309,7 @@ const MainScreenPreview = ({ theme, isMobile }) => {
                     <div className="profile-page-inner main-screen-preview__profile-inner">
                       <div className="profile-photo-panel">
                         <div className="profile-photo-wrap">
-                          <img src={DEFAULT_AVATARS_BOY[0]} alt="Profile" className="profile-photo-img" />
+                          <img src={ANIMAL_AVATAR_URLS[2]} alt="Profile" className="profile-photo-img" />
                         </div>
                       </div>
                       <div className="profile-cards-panel">

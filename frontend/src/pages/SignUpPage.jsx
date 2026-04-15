@@ -9,7 +9,7 @@ import {
   User,
 } from "lucide-react";
 import AuthLeftPanel from "../components/AuthLeftPanel";
-import { getRandomAvatarByGender } from "../lib/defaultAvatar.js";
+import { getRandomAnimalAvatar } from "../lib/defaultAvatar.js";
 import "./AuthPage.css";
 import toast from "react-hot-toast";
 
@@ -20,7 +20,6 @@ const SignUpPage = () => {
     lastName: "",
     email: "",
     password: "",
-    gender: "male",
   });
 
   const { signup, isSigningUp } = useAuthStore();
@@ -41,8 +40,13 @@ const SignUpPage = () => {
     if (!validateForm()) return;
     const fullName = [formData.firstName.trim(), formData.lastName.trim()].filter(Boolean).join(" ").trim();
     if (!fullName) return toast.error("First name is required");
-    const profilePic = getRandomAvatarByGender(formData.gender);
-    signup({ fullName, email: formData.email, password: formData.password, gender: formData.gender, profilePic });
+    const profilePic = getRandomAnimalAvatar();
+    signup({
+      fullName,
+      email: formData.email,
+      password: formData.password,
+      profilePic,
+    });
   };
 
   return (
@@ -152,38 +156,6 @@ const SignUpPage = () => {
                     <Eye className="w-4 h-4" />
                   )}
                 </button>
-              </div>
-            </div>
-
-            <div className="auth-form__group auth-form__group--row">
-              <span className="auth-form__label">Gender</span>
-              <div className="auth-form__radios">
-                <label className="auth-form__radio-label">
-                  <input
-                    type="radio"
-                    name="signup-gender"
-                    value="male"
-                    checked={formData.gender === "male"}
-                    onChange={(e) =>
-                      setFormData({ ...formData, gender: e.target.value })
-                    }
-                    className="auth-form__radio"
-                  />
-                  <span>Male</span>
-                </label>
-                <label className="auth-form__radio-label">
-                  <input
-                    type="radio"
-                    name="signup-gender"
-                    value="female"
-                    checked={formData.gender === "female"}
-                    onChange={(e) =>
-                      setFormData({ ...formData, gender: e.target.value })
-                    }
-                    className="auth-form__radio"
-                  />
-                  <span>Female</span>
-                </label>
               </div>
             </div>
 
