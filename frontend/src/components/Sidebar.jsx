@@ -1,15 +1,17 @@
-import { MessageCircle, Users, User, Settings, LogOut } from "lucide-react";
+import { MessageCircle, Users, User, Sun, Moon, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useThemeStore } from "../store/useThemeStore";
 import { useIsMobile } from "../hooks/useMediaQuery";
 import "./Sidebar.css";
+
+const DARK_BG_VALUES = ["#0a0a0a", "#0f0f0f", "#000000"];
 
 const NAV_ITEMS = [
   { id: "all", label: "All chats", Icon: MessageCircle, badge: true },
   { id: "friends", label: "Friends", Icon: Users, badge: false },
   { id: "profile", label: "Profile", Icon: User, badge: false },
-  { id: "edit", label: "Edit", Icon: Settings, badge: false },
 ];
 
 const Sidebar = () => {
@@ -18,21 +20,29 @@ const Sidebar = () => {
   const isMobile = useIsMobile();
   const { unreadCountByChatId } = useChatStore();
   const { logout } = useAuthStore();
+  const theme = useThemeStore((s) => s.theme);
+  const applyPreset = useThemeStore((s) => s.applyPreset);
+
+  const isDarkMode =
+    theme &&
+    (DARK_BG_VALUES.includes(theme.chatBg) ||
+      DARK_BG_VALUES.includes(theme.pageBg));
 
   const activeNav =
     location.pathname === "/friends"
       ? "friends"
       : location.pathname === "/profile"
         ? "profile"
-        : location.pathname === "/settings"
-          ? "edit"
-          : "all";
+        : "all";
 
   const handleNavClick = (id) => {
     if (id === "profile") navigate("/profile");
-    if (id === "edit") return; // keep icon visible, page removed
     if (id === "friends") navigate("/friends");
     if (id === "all") navigate("/");
+  };
+
+  const handleThemeClick = () => {
+    applyPreset(isDarkMode ? "light" : "dark");
   };
 
   const unreadChatCount = unreadCountByChatId
@@ -75,6 +85,7 @@ const Sidebar = () => {
         {NAV_ITEMS.map(({ id, label, Icon, badge }) => (
           <button
             key={id}
+            type="button"
             onClick={() => handleNavClick(id)}
             className={`sidebar-ref__nav-item ${activeNav === id ? "active" : ""}`}
           >
@@ -87,6 +98,19 @@ const Sidebar = () => {
             <span className="sidebar-ref__nav-label">{label}</span>
           </button>
         ))}
+        <button
+          type="button"
+          onClick={handleThemeClick}
+          className="sidebar-ref__nav-item"
+          aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          <span className="sidebar-ref__nav-icon-wrap">
+            {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
+          </span>
+          <span className="sidebar-ref__nav-label">
+            {isDarkMode ? "Light mode" : "Dark mode"}
+          </span>
+        </button>
       </nav>
 
       <div className="sidebar-ref__bottom">

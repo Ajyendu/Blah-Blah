@@ -1,13 +1,14 @@
 /**
  * Main screen preview: exact copy of the app layout (sidebar + chat list + main area).
- * Theme passed as CSS vars on wrapper. Nav buttons switch between All chats, Friends, Profile, Edit previews.
+ * Theme passed as CSS vars on wrapper. Fourth nav control toggles light/dark for the preview only.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MessageCircle,
   Users,
   User,
-  Settings,
+  Sun,
+  Moon,
   LogOut,
   Search,
   Phone,
@@ -34,12 +35,12 @@ import "../pages/ProfilePage.css";
 import "../pages/Homepage.css";
 import "../pages/SettingsPage.css";
 import "./MainScreenPreview.css";
+import { DEFAULT_THEME, DARK_THEME } from "../store/useThemeStore.js";
 
 const NAV_ITEMS = [
   { id: "all", label: "All chats", Icon: MessageCircle, badge: true },
   { id: "friends", label: "Friends", Icon: Users, badge: false },
   { id: "profile", label: "Profile", Icon: User, badge: false },
-  { id: "edit", label: "Edit", Icon: Settings, badge: false },
 ];
 
 const MOCK_CHATS = [
@@ -57,46 +58,44 @@ const MOCK_MESSAGES = [
   { id: "m2", text: "Hey", mine: true, seenLabel: "Seen at 19:58 today" },
 ];
 
-const SETTINGS_COLOR_ITEMS = [
-  { key: "accent", label: "Accent" },
-  { key: "appBg", label: "App bg" },
-  { key: "panelBg", label: "Panel" },
-  { key: "darkBg", label: "Sidebar" },
-  { key: "bubbleMine", label: "My bubble" },
-  { key: "bubbleOther", label: "Other bubble" },
-  { key: "textPrimary", label: "Text" },
-  { key: "textSecondary", label: "Text secondary" },
-];
-
 const DARK_BG_VALUES = ["#0f0f0f", "#000000", "#0a0a0a", "#111111", "#0d0d0d", "#141414"];
 
 const MainScreenPreview = ({ theme, isMobile }) => {
   const [activeNav, setActiveNav] = useState("all");
+  /** null = follow `theme` prop; true/false = force dark/light preset in this preview only */
+  const [previewDarkOverride, setPreviewDarkOverride] = useState(null);
+
+  useEffect(() => {
+    setPreviewDarkOverride(null);
+  }, [theme]);
 
   if (!theme) return null;
 
-  const isDarkMode =
-    DARK_BG_VALUES.includes(theme.appBg) ||
-    DARK_BG_VALUES.includes(theme.pageBg) ||
-    DARK_BG_VALUES.includes(theme.chatBg);
-  const previewColorItems =
-    isDarkMode
-      ? SETTINGS_COLOR_ITEMS.filter(({ key }) => key === "accent" || key === "bubbleMine")
-      : SETTINGS_COLOR_ITEMS;
+  const displayTheme =
+    previewDarkOverride === true
+      ? DARK_THEME
+      : previewDarkOverride === false
+        ? DEFAULT_THEME
+        : theme;
+
+  const displayIsDark =
+    DARK_BG_VALUES.includes(displayTheme.appBg) ||
+    DARK_BG_VALUES.includes(displayTheme.pageBg) ||
+    DARK_BG_VALUES.includes(displayTheme.chatBg);
 
   const vars = {
-    "--app-bg": theme.appBg,
-    "--primary": theme.primary,
-    "--accent": theme.accent,
-    "--accent-dark": theme.accentDark || theme.accent,
-    "--dark-bg": theme.darkBg != null ? theme.darkBg : "#000000",
-    "--bubble-mine": theme.bubbleMine,
-    "--bubble-other": theme.bubbleOther,
-    "--text-primary": theme.textPrimary,
-    "--text-secondary": theme.textSecondary,
-    "--chat-bg": theme.chatBg,
-    "--panel-bg": theme.panelBg ?? "#ffffff",
-    "--page-bg": theme.pageBg,
+    "--app-bg": displayTheme.appBg,
+    "--primary": displayTheme.primary,
+    "--accent": displayTheme.accent,
+    "--accent-dark": displayTheme.accentDark || displayTheme.accent,
+    "--dark-bg": displayTheme.darkBg != null ? displayTheme.darkBg : "#000000",
+    "--bubble-mine": displayTheme.bubbleMine,
+    "--bubble-other": displayTheme.bubbleOther,
+    "--text-primary": displayTheme.textPrimary,
+    "--text-secondary": displayTheme.textSecondary,
+    "--chat-bg": displayTheme.chatBg,
+    "--panel-bg": displayTheme.panelBg ?? "#ffffff",
+    "--page-bg": displayTheme.pageBg,
   };
 
   return (
@@ -143,6 +142,25 @@ const MainScreenPreview = ({ theme, isMobile }) => {
                       <span className="sidebar-ref__nav-label">{label}</span>
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewDarkOverride(displayIsDark ? false : true)
+                    }
+                    className="sidebar-ref__nav-item"
+                    aria-label={
+                      displayIsDark
+                        ? "Switch preview to light mode"
+                        : "Switch preview to dark mode"
+                    }
+                  >
+                    <span className="sidebar-ref__nav-icon-wrap">
+                      {displayIsDark ? <Sun size={22} /> : <Moon size={22} />}
+                    </span>
+                    <span className="sidebar-ref__nav-label">
+                      {displayIsDark ? "Light mode" : "Dark mode"}
+                    </span>
+                  </button>
                 </nav>
 
                 <div className="sidebar-ref__bottom">
@@ -337,42 +355,6 @@ const MainScreenPreview = ({ theme, isMobile }) => {
                 </div>
               )}
 
-              {activeNav === "edit" && (
-                <div className="main-screen-preview__settings">
-                  <div className="main-screen-preview__settings-scale-wrap">
-                  <div className="main-screen-preview__settings-scale">
-                    <div className="settings-appearance-block">
-                      <div className="settings-appearance-row">
-                        <div className="settings-preview-block" aria-hidden />
-                        <div className="settings-colors-cards">
-                          <div className="settings-theme-actions">
-                            <button type="button" className="settings-action-btn settings-action-btn--reset" disabled>Reset</button>
-                            <button type="button" className="settings-action-btn settings-action-btn--cancel" disabled>Cancel</button>
-                            <button type="button" className="settings-action-btn settings-action-btn--save" disabled>Save</button>
-                          </div>
-                          <div className="theme-cards-grid">
-                            {previewColorItems.map(({ key, label }) => {
-                              const value = key === "darkBg" ? (theme.darkBg != null ? theme.darkBg : "#000000") : key === "panelBg" ? (theme.panelBg ?? "#ffffff") : (theme[key] ?? "");
-                              return (
-                                <div key={key} className="theme-color-card">
-                                  <span className="theme-color-card__swatch" style={{ background: value }} />
-                                  <span className="theme-color-card__label">{label}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="settings-danger-zone">
-                            <h3>Delete account</h3>
-                            <p>Permanently delete your account and data. This cannot be undone.</p>
-                            <button type="button" className="settings-delete-btn" disabled>Delete my account</button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

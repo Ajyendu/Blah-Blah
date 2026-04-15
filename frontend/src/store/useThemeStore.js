@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 
 /** Bright/light mode: white backgrounds */
-const DEFAULT_THEME = {
+export const DEFAULT_THEME = {
   pageBg: "#ffffff",
   appBg: "#ffffff",
   /** Conversation panel, header panel, and text input panel (one colour for all three) */
@@ -50,7 +50,7 @@ const DEFAULT_THEME = {
 };
 
 /** Dark mode preset: multiple shades of grey/black for depth and reduced eye strain */
-const DARK_THEME = {
+export const DARK_THEME = {
   ...DEFAULT_THEME,
   /* Deepest background (page, chat area) */
   pageBg: "#0a0a0a",
