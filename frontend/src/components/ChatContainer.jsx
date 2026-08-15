@@ -5,12 +5,7 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
-import { useThemeStore } from "../store/useThemeStore";
-import { useMoodBackground } from "./utils/mood/useMoodBackground";
-import "./mood.css";
-import MessageItem from "./MessageItem";
-import NoChatSelected from "./NoChatSelected";
-import { formatRevealLabel } from "./MessageItem";
+import MessageItem, { formatRevealLabel } from "./MessageItem";
 import { useNoteStore } from "../store/useNoteStore";
 import { useGameStore } from "../store/useGameStore";
 import { DEFAULT_AVATAR_URL } from "../lib/defaultAvatar.js";
@@ -53,7 +48,6 @@ const ChatContainer = ({
   startCall,
 }) => {
   const {
-    isScreenSharing,
     messages,
     getMessagesByConversation,
     loadMoreOlderMessages,
@@ -63,15 +57,11 @@ const ChatContainer = ({
     selectedUser,
     selectedChat,
     markMessageRevealed,
-    subscribeToMessages,
-    unsubscribeFromMessages,
     deleteMessage,
     subscribeToChatEvents,
-    unsubscribeFromChatEvents,
   } = useChatStore();
 
   const { authUser } = useAuthStore();
-  const theme = useThemeStore((s) => s.theme);
   const toggleNote = useNoteStore((s) => s.toggleNote);
   const searchNote = useNoteStore((s) => s.searchNote);
   const noteIds = useNoteStore((s) => s.noteIds);
@@ -178,7 +168,6 @@ const ChatContainer = ({
     // then load messages
     getMessagesByConversation(selectedChat._id);
 
-    // then mark seen
     socket.emit("chat_opened", {
       chatId: selectedChat._id,
       userId: authUser._id,
@@ -191,43 +180,7 @@ const ChatContainer = ({
     if (selectedChat?._id) {
       fetchNotes(selectedChat._id);
     }
-  }, [selectedChat?._id]);
-  const [botTyping, setBotTyping] = useState(false);
-
-  useEffect(() => {
-    const socket = useAuthStore.getState().socket;
-    if (!socket) return;
-    socket.on("bot_typing", (status) => {
-      setBotTyping(status);
-    });
-    return () => socket.off("bot_typing");
-  }, []);
-
-  // useEffect(() => {
-  //   const socket = useAuthStore.getState().socket;
-  //   const { markChatSeen } = useChatStore.getState();
-
-  //   if (!socket) return;
-
-  //   const handleSeenUpdate = ({ chatId, seenAt }) => {
-  //     if (chatId !== selectedChat?._id) return;
-  //     markChatSeen(chatId, seenAt);
-  //   };
-
-  //   socket.on("chat_seen_update", handleSeenUpdate);
-
-  //   return () => {
-  //     socket.off("chat_seen_update", handleSeenUpdate);
-  //   };
-  // }, [selectedChat?._id]);
-
-  /* ================= LOAD + SOCKET ================= */
-
-  /* ================= CHAT EVENTS ================= */
-
-  /* ================= MOOD BACKGROUND ================= */
-
-  useMoodBackground(safeMessages, authUser._id, selectedChat._id);
+  }, [selectedChat?._id, fetchNotes]);
 
   /* ================= AUTO SCROLL ================= */
 
@@ -703,18 +656,6 @@ const ChatContainer = ({
               );
             });
           })()}
-          {botTyping && (
-            <div className="bot-typing">
-              <span className="bot-name"></span>
-              <div className="typing-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          )}
-
-          {/* ALWAYS PRESENT */}
           <div ref={bottomRef} />
         </div>
       </div>

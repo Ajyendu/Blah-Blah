@@ -19,6 +19,7 @@ export default defineConfig(async ({ command }) => {
       port: 8080,
     },
     build: {
+      target: "es2022",
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -26,7 +27,6 @@ export default defineConfig(async ({ command }) => {
               if (id.includes("react-dom") || id.includes("/react/")) {
                 return "react-vendor";
               }
-              if (id.includes("recharts")) return "charts";
               if (id.includes("socket.io-client")) return "socket";
             }
           },

@@ -3,7 +3,6 @@ import cors from "cors";
 import compression from "compression";
 import { corsOptions } from "./lib/corsConfig.js";
 import cookieParser from "cookie-parser";
-import path from "path";
 import express from "express";
 import http from "http";
 import Message from "./models/message.model.js";
@@ -20,7 +19,6 @@ import conversationRoutes from "./routes/conversation.route.js";
 import readyRoutes from "./routes/ready.route.js";
 import noteRoutes from "./routes/note.routes.js";
 import drawingRoutes from "./routes/drawing.route.js";
-import chatDNARoutes from "./routes/chatDNA.js";
 import watchPartyRoutes from "./routes/watchParty.route.js";
 dotenv.config();
 
@@ -28,7 +26,6 @@ const app = express();
 const server = http.createServer(app); // ✅ CREATE SERVER
 
 const PORT = process.env.PORT || 5000;
-const __dirname = path.resolve();
 
 /* ================= MIDDLEWARE ================= */
 // CORS first. Preview URLs (e.g. *.vercel.app) are whitelisted in corsConfig.
@@ -62,7 +59,6 @@ app.use("/api/conversations", conversationRoutes);
 app.use("/ready", readyRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/drawings", drawingRoutes);
-app.use("/api/chat-dna", chatDNARoutes);
 app.use("/api/watch-party", watchPartyRoutes);
 
 /* ================= HEALTH ================= */
@@ -102,17 +98,18 @@ app.get("/metrics", (req, res) => {
 /* ================= SOCKET ================= */
 initSocket(server); // ✅ ATTACH SOCKET.IO
 
+const TIMED_MESSAGE_INTERVAL_MS = 15_000;
+
 function startTimedMessageScheduler() {
   setInterval(async () => {
     try {
-      const now = new Date();
-
       const pending = await Message.find({
         revealed: false,
-        revealAt: { $lte: now },
+        revealAt: { $lte: new Date() },
         deleted: { $ne: true },
       })
         .select("_id chatId")
+        .limit(200)
         .lean();
 
       if (!pending.length) return;
@@ -130,10 +127,9 @@ function startTimedMessageScheduler() {
         }
       }
     } catch (err) {
-      // 🔥 swallow error so process never dies
-      console.error("⏰ Scheduler error (safe):", err.message);
+      console.error("Timed message scheduler error:", err.message);
     }
-  }, 1000);
+  }, TIMED_MESSAGE_INTERVAL_MS);
 }
 
 /* ================= START ================= */

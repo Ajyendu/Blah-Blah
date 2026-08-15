@@ -8,4 +8,5 @@ const apiBase = normalized.endsWith("/api") ? normalized : `${normalized}/api`;
 export const axiosInstance = axios.create({
   baseURL: apiBase,
   withCredentials: true,
+  timeout: 20000,
 });

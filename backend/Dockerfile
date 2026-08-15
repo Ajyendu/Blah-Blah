@@ -1,40 +1,17 @@
-# Stage 1: Build
-FROM node:18-alpine AS builder
-
-# Set working directory
+# Stage 1: Install
+FROM node:22-alpine AS builder
 WORKDIR /app
-
-# Install dependencies
 COPY package.json package-lock.json ./
-RUN npm ci --only=production
-
-# Copy source code
+RUN npm ci --omit=dev
 COPY . .
 
 # Stage 2: Production
-FROM node:18-alpine
-
-# Set working directory
+FROM node:22-alpine
 WORKDIR /app
-
-# Create a non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Copy dependencies from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app ./
-
-# Set environment variables
 ENV NODE_ENV=production
-
-# Expose port
 EXPOSE 5001
-
-# Switch to non-root user
 USER appuser
-
-# Start the server
 CMD ["npm", "start"]
-
-# HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
-#   CMD wget -qO- http://localhost:5001/health || exit 1

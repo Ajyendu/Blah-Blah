@@ -5,17 +5,18 @@ import ChatListPanel from "../components/ChatListPanel";
 import { useAuthStore } from "../store/useAuthStore";
 import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, lazy, Suspense } from "react";
 import { useIsMobile } from "../hooks/useMediaQuery";
 import "./Homepage.css";
-import ChatNotes from "../components/ChatNotes";
-import ChatDrawing from "../components/ChatDrawing";
-import ChatVideoPanel from "../components/ChatVideoPanel";
-import TruthDarePanel from "../components/TruthDarePanel";
 import SlidableBottomSheet from "../components/SlidableBottomSheet";
 import GamePlayingListener from "../components/GamePlayingListener";
 import { useNoteStore } from "../store/useNoteStore";
 import { useGameStore } from "../store/useGameStore";
+
+const ChatNotes = lazy(() => import("../components/ChatNotes"));
+const ChatDrawing = lazy(() => import("../components/ChatDrawing"));
+const ChatVideoPanel = lazy(() => import("../components/ChatVideoPanel"));
+const TruthDarePanel = lazy(() => import("../components/TruthDarePanel"));
 
 const HomePage = ({
   setActiveCallUserAvatar,
@@ -121,7 +122,9 @@ const HomePage = ({
                 onClose={() => setIsNotesOpen(false)}
                 peekLabel="Notes"
               >
-                <ChatNotes />
+                <Suspense fallback={null}>
+                  <ChatNotes />
+                </Suspense>
               </SlidableBottomSheet>
             )}
             {isDrawingOpen && (
@@ -131,7 +134,9 @@ const HomePage = ({
                 onClose={() => setIsDrawingOpen(false)}
                 peekLabel="Drawing"
               >
-                <ChatDrawing />
+                <Suspense fallback={null}>
+                  <ChatDrawing />
+                </Suspense>
               </SlidableBottomSheet>
             )}
             {isVideoPanelOpen && (
@@ -141,7 +146,9 @@ const HomePage = ({
                 onClose={() => setIsVideoPanelOpen(false)}
                 peekLabel="Watch Together"
               >
-                <ChatVideoPanel />
+                <Suspense fallback={null}>
+                  <ChatVideoPanel />
+                </Suspense>
               </SlidableBottomSheet>
             )}
             {isTruthDareOpen && (
@@ -151,7 +158,9 @@ const HomePage = ({
                 onClose={() => setTruthDareOpen(false)}
                 peekLabel="Truth or Dare"
               >
-                <TruthDarePanel />
+                <Suspense fallback={null}>
+                  <TruthDarePanel />
+                </Suspense>
               </SlidableBottomSheet>
             )}
           </>
@@ -160,22 +169,30 @@ const HomePage = ({
         {/* Desktop/laptop: panels inline (no sliding sheet) */}
         {!isMobile && isNotesOpen && (
           <div className="desktop-panel-wrap">
-            <ChatNotes />
+            <Suspense fallback={null}>
+              <ChatNotes />
+            </Suspense>
           </div>
         )}
         {!isMobile && isDrawingOpen && (
           <div className="desktop-panel-wrap">
-            <ChatDrawing />
+            <Suspense fallback={null}>
+              <ChatDrawing />
+            </Suspense>
           </div>
         )}
         {!isMobile && isVideoPanelOpen && (
           <div className="desktop-panel-wrap">
-            <ChatVideoPanel />
+            <Suspense fallback={null}>
+              <ChatVideoPanel />
+            </Suspense>
           </div>
         )}
         {!isMobile && isTruthDareOpen && (
           <div className="desktop-panel-wrap">
-            <TruthDarePanel />
+            <Suspense fallback={null}>
+              <TruthDarePanel />
+            </Suspense>
           </div>
         )}
       </div>

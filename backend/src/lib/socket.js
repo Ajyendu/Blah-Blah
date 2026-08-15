@@ -2,10 +2,6 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
-import { detectBotMention } from "./detectBot.js";
-import { generateAIReply } from "../AI/aiService.js";
-import ChatMemory from "../models/chatMemory.model.js";
-import { extractMemory } from "../AI/memoryExtractor.js";
 import { corsOriginCallback } from "./corsConfig.js";
 
 let io;
@@ -15,10 +11,30 @@ let io;
  */
 const userSocketMap = new Map();
 
+let onlineBroadcastTimer = null;
+
+function broadcastOnlineUsers() {
+  if (!io) return;
+  clearTimeout(onlineBroadcastTimer);
+  onlineBroadcastTimer = setTimeout(() => {
+    io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
+  }, 250);
+}
+
+function emitToMappedUser(userId, event, payload) {
+  const sockets = userSocketMap.get(String(userId));
+  if (!sockets) return;
+  for (const sid of sockets) {
+    io.to(sid).emit(event, payload);
+  }
+}
+
 export const initSocket = (server) => {
   io = new Server(server, {
     path: "/socket.io",
-    maxHttpBufferSize: 5e6, // 5MB for drawing canvas state
+    maxHttpBufferSize: 5e6,
+    pingInterval: 25000,
+    pingTimeout: 20000,
     cors: {
       origin: corsOriginCallback,
       credentials: true,
@@ -31,58 +47,45 @@ export const initSocket = (server) => {
     },
   });
 
-  // ================= AUTH =================
   io.use(async (socket, next) => {
     try {
       const secret = process.env.JWT_SECRET;
       if (!secret || !secret.trim()) {
-        console.error("❌ socket auth: JWT_SECRET is not set in .env");
         return next(new Error("Unauthorized"));
       }
 
       const token = socket.handshake.auth?.token;
       if (!token) {
-        console.error("❌ socket auth: token missing");
         return next(new Error("Unauthorized"));
       }
 
       const decoded = jwt.verify(token, secret);
-      const user = await User.findById(decoded.userId).select(
-        "_id fullName profilePic",
-      );
+      const user = await User.findById(decoded.userId)
+        .select("_id fullName profilePic")
+        .lean();
 
       if (!user) {
-        console.error("❌ socket auth: user not found");
         return next(new Error("Unauthorized"));
       }
 
       socket.userId = user._id.toString();
       socket.userName = user.fullName;
       socket.userAvatar = user.profilePic;
-
-      console.log("👤 socket auth OK:", socket.userId);
       next();
-    } catch (err) {
-      console.error("❌ socket auth error:", err.message);
+    } catch {
       next(new Error("Unauthorized"));
     }
   });
 
-  // ================= CONNECTION =================
   io.on("connection", (socket) => {
-    console.log("🟢 socket connected:", socket.id, socket.userId);
-
     const sockets = userSocketMap.get(socket.userId) || new Set();
     sockets.add(socket.id);
     userSocketMap.set(socket.userId, sockets);
 
     socket.join(socket.userId);
-
-    io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
+    broadcastOnlineUsers();
 
     socket.on("disconnect", () => {
-      console.log("🔴 socket disconnected:", socket.id);
-
       const set = userSocketMap.get(socket.userId);
       if (set) {
         set.delete(socket.id);
@@ -90,113 +93,58 @@ export const initSocket = (server) => {
           userSocketMap.delete(socket.userId);
         }
       }
-
-      io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
+      broadcastOnlineUsers();
     });
 
-    socket.on("send_message", async ({ chatId, message }) => {
-      try {
-        // 1️⃣ Detect @Buddy
-        const cleanMessage = detectBotMention(message);
-
-        if (!cleanMessage) return; // No AI trigger
-
-        // 2️⃣ Generate AI reply
-        const aiReply = await generateAIReply(cleanMessage);
-
-        // 3️⃣ Send PRIVATE reply only to this user
-        socket.emit("ai_private_reply", {
-          chatId,
-          message: aiReply,
-          sender: {
-            _id: "buddy",
-            fullName: "Buddy",
-            profilePic: null,
-          },
-          private: true,
-          createdAt: new Date(),
-        });
-      } catch (error) {
-        console.error("AI error:", error.message);
-      }
-    });
-
-    // ================= CALL =================
     socket.on("call-user", ({ to, offer, callType }) => {
       const toId = to != null ? String(to) : null;
       if (!toId) return;
-      const receiverSockets = userSocketMap.get(toId);
-      if (!receiverSockets) return;
-
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("incoming-call", {
-          from: socket.userId,
-          name: socket.userName,
-          avatar: socket.userAvatar,
-          offer,
-          callType,
-        });
-      }
+      emitToMappedUser(toId, "incoming-call", {
+        from: socket.userId,
+        name: socket.userName,
+        avatar: socket.userAvatar,
+        offer,
+        callType,
+      });
     });
 
     socket.on("answer-call", ({ to, answer }) => {
       const toId = to != null ? String(to) : null;
       if (!toId) return;
-      const receiverSockets = userSocketMap.get(toId);
-      if (!receiverSockets) return;
-
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("call-answered", { answer });
-      }
+      emitToMappedUser(toId, "call-answered", { answer });
     });
 
     socket.on("ice-candidate", ({ to, candidate }) => {
       const toId = to != null ? String(to) : null;
       if (!toId) return;
-      const receiverSockets = userSocketMap.get(toId);
-      if (!receiverSockets) return;
-
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("ice-candidate", { candidate });
-      }
+      emitToMappedUser(toId, "ice-candidate", { candidate });
     });
 
     socket.on("chat_opened", async ({ chatId, userId }) => {
-      const result = await Message.updateMany(
-        {
+      if (!chatId || !userId) return;
+      try {
+        await Message.updateMany(
+          { chatId, receiverId: userId, seen: false },
+          { $set: { seen: true, seenAt: new Date() } },
+        );
+
+        const senderIds = await Message.distinct("senderId", {
           chatId,
           receiverId: userId,
-          seen: false,
-        },
-        {
-          $set: {
-            seen: true,
-            seenAt: new Date(),
-          },
-        },
-      );
+        });
 
-      const messages = await Message.find({
-        chatId,
-        receiverId: userId,
-      }).select("senderId");
-
-      const senderIds = [
-        ...new Set(messages.map((m) => m.senderId.toString())),
-      ];
-
-      for (const senderId of senderIds) {
-        const senderSockets = userSocketMap.get(senderId);
-        if (!senderSockets) continue;
-
-        for (const sid of senderSockets) {
-          io.to(sid).emit("chat_seen_update", {
+        const seenAt = new Date();
+        for (const senderId of senderIds) {
+          emitToMappedUser(senderId.toString(), "chat_seen_update", {
             chatId,
-            seenAt: new Date(),
+            seenAt,
           });
         }
+      } catch (err) {
+        console.error("chat_opened error:", err.message);
       }
     });
+
     socket.on("screen_share_started", ({ chatId }) => {
       socket.to(chatId).emit("screen_share_started");
     });
@@ -215,59 +163,38 @@ export const initSocket = (server) => {
       "game_playing",
       ({ chatId, otherUserId, gameName, userName, userAvatar }) => {
         if (!chatId || !otherUserId) return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        const payload = {
+        emitToMappedUser(otherUserId, "game_playing", {
           chatId: chatId.toString(),
           userId: socket.userId,
           userName: userName ?? socket.userName,
           userAvatar: userAvatar ?? socket.userAvatar,
           gameName: gameName ?? "Truth or Dare",
-        };
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("game_playing", payload);
-        }
+        });
       },
     );
 
     socket.on("game_left", ({ chatId, otherUserId }) => {
       if (!chatId || !otherUserId) return;
-      const receiverSockets = userSocketMap.get(otherUserId.toString());
-      if (!receiverSockets) return;
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("game_left", {
-          chatId: chatId.toString(),
-          userId: socket.userId,
-        });
-      }
+      emitToMappedUser(otherUserId, "game_left", {
+        chatId: chatId.toString(),
+        userId: socket.userId,
+      });
     });
 
-    socket.on(
-      "drawing_playing",
-      ({ chatId, otherUserId }) => {
-        if (!chatId || !otherUserId) return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        const payload = {
-          chatId: chatId.toString(),
-          userId: socket.userId,
-        };
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("drawing_playing", payload);
-        }
-      },
-    );
+    socket.on("drawing_playing", ({ chatId, otherUserId }) => {
+      if (!chatId || !otherUserId) return;
+      emitToMappedUser(otherUserId, "drawing_playing", {
+        chatId: chatId.toString(),
+        userId: socket.userId,
+      });
+    });
 
     socket.on("drawing_left", ({ chatId, otherUserId }) => {
       if (!chatId || !otherUserId) return;
-      const receiverSockets = userSocketMap.get(otherUserId.toString());
-      if (!receiverSockets) return;
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("drawing_left", {
-          chatId: chatId.toString(),
-          userId: socket.userId,
-        });
-      }
+      emitToMappedUser(otherUserId, "drawing_left", {
+        chatId: chatId.toString(),
+        userId: socket.userId,
+      });
     });
 
     socket.on(
@@ -275,58 +202,45 @@ export const initSocket = (server) => {
       ({ chatId, otherUserId, points, color, brushSize, tool }) => {
         if (!chatId || !otherUserId || !Array.isArray(points) || points.length < 2)
           return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        const payload = {
+        emitToMappedUser(otherUserId, "drawing_stroke", {
           chatId: chatId.toString(),
           points,
           color: color ?? "#1e293b",
           brushSize: brushSize ?? 4,
           tool: tool ?? "brush",
-        };
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("drawing_stroke", payload);
-        }
+        });
       },
     );
 
     socket.on("drawing_undo", ({ chatId, otherUserId }) => {
       if (!chatId || !otherUserId) return;
-      const receiverSockets = userSocketMap.get(otherUserId.toString());
-      if (!receiverSockets) return;
-      const payload = { chatId: chatId.toString(), fromUserId: socket.userId };
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("drawing_undo", payload);
-      }
+      emitToMappedUser(otherUserId, "drawing_undo", {
+        chatId: chatId.toString(),
+        fromUserId: socket.userId,
+      });
     });
 
     socket.on("drawing_redo", ({ chatId, otherUserId }) => {
       if (!chatId || !otherUserId) return;
-      const receiverSockets = userSocketMap.get(otherUserId.toString());
-      if (!receiverSockets) return;
-      const payload = { chatId: chatId.toString(), fromUserId: socket.userId };
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("drawing_redo", payload);
-      }
+      emitToMappedUser(otherUserId, "drawing_redo", {
+        chatId: chatId.toString(),
+        fromUserId: socket.userId,
+      });
     });
 
     socket.on("drawing_clear", ({ chatId, otherUserId }) => {
       if (!chatId || !otherUserId) return;
-      const receiverSockets = userSocketMap.get(otherUserId.toString());
-      if (!receiverSockets) return;
-      const payload = { chatId: chatId.toString(), fromUserId: socket.userId };
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("drawing_clear", payload);
-      }
+      emitToMappedUser(otherUserId, "drawing_clear", {
+        chatId: chatId.toString(),
+        fromUserId: socket.userId,
+      });
     });
 
     socket.on("drawing_request_canvas_state", ({ chatId, requestToUserId }) => {
       if (!chatId || !requestToUserId) return;
-      const targetSockets = userSocketMap.get(String(requestToUserId));
-      if (!targetSockets) return;
-      for (const sid of targetSockets) {
-        io.to(sid).emit("drawing_request_canvas_state", { chatId: chatId.toString() });
-      }
+      emitToMappedUser(requestToUserId, "drawing_request_canvas_state", {
+        chatId: chatId.toString(),
+      });
     });
 
     socket.on("drawing_canvas_state", ({ chatId, imageData }) => {
@@ -335,116 +249,85 @@ export const initSocket = (server) => {
       socket.to(room).emit("drawing_canvas_state", { chatId: room, imageData });
     });
 
-    socket.on(
-      "watch_party_playing",
-      ({ chatId, otherUserId }) => {
-        if (!chatId || !otherUserId) return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        const payload = {
-          chatId: chatId.toString(),
-          userId: socket.userId,
-        };
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("watch_party_playing", payload);
-        }
-      },
-    );
+    socket.on("watch_party_playing", ({ chatId, otherUserId }) => {
+      if (!chatId || !otherUserId) return;
+      emitToMappedUser(otherUserId, "watch_party_playing", {
+        chatId: chatId.toString(),
+        userId: socket.userId,
+      });
+    });
 
     socket.on("watch_party_left", ({ chatId, otherUserId }) => {
       if (!chatId || !otherUserId) return;
-      const receiverSockets = userSocketMap.get(otherUserId.toString());
-      if (!receiverSockets) return;
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("watch_party_left", {
-          chatId: chatId.toString(),
-          userId: socket.userId,
-        });
-      }
+      emitToMappedUser(otherUserId, "watch_party_left", {
+        chatId: chatId.toString(),
+        userId: socket.userId,
+      });
+    });
+
+    socket.on("watch_party_youtube_url", ({ chatId, otherUserId, url }) => {
+      if (!chatId || !otherUserId) return;
+      emitToMappedUser(otherUserId, "watch_party_youtube_url", {
+        chatId: chatId.toString(),
+        userId: socket.userId,
+        url: url ?? "",
+      });
+    });
+
+    socket.on("watch_party_local_video_url", ({ chatId, otherUserId, url }) => {
+      if (!chatId || !otherUserId || !url) return;
+      emitToMappedUser(otherUserId, "watch_party_local_video_url", {
+        chatId: chatId.toString(),
+        userId: socket.userId,
+        url: String(url),
+      });
     });
 
     socket.on(
-      "watch_party_youtube_url",
-      ({ chatId, otherUserId, url }) => {
-        if (!chatId || !otherUserId) return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        const payload = {
-          chatId: chatId.toString(),
-          userId: socket.userId,
-          url: url ?? "",
-        };
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("watch_party_youtube_url", payload);
-        }
-      },
-    );
-
-    socket.on(
-      "watch_party_local_video_url",
-      ({ chatId, otherUserId, url }) => {
-        if (!chatId || !otherUserId || !url) return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        const payload = {
-          chatId: chatId.toString(),
-          userId: socket.userId,
-          url: String(url),
-        };
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("watch_party_local_video_url", payload);
-        }
-      },
-    );
-
-    socket.on(
       "watch_party_sync",
-      ({ chatId, otherUserId, event, currentTime, isPaused, ts, source: senderSource }) => {
+      ({
+        chatId,
+        otherUserId,
+        event,
+        currentTime,
+        isPaused,
+        ts,
+        source: senderSource,
+      }) => {
         if (!chatId || !otherUserId) return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        const payload = {
+        emitToMappedUser(otherUserId, "watch_party_sync", {
           chatId: chatId.toString(),
           userId: socket.userId,
           event: event ?? "timeupdate",
           currentTime: typeof currentTime === "number" ? currentTime : undefined,
           isPaused: !!isPaused,
           ts: typeof ts === "number" ? ts : undefined,
-          source: senderSource === "local" || senderSource === "youtube" ? senderSource : null,
-        };
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("watch_party_sync", payload);
-        }
+          source:
+            senderSource === "local" || senderSource === "youtube"
+              ? senderSource
+              : null,
+        });
       },
     );
 
     socket.on("watch_party_clear", ({ chatId, otherUserId }) => {
       if (!chatId || !otherUserId) return;
-      const receiverSockets = userSocketMap.get(otherUserId.toString());
-      if (!receiverSockets) return;
-      const payload = {
+      emitToMappedUser(otherUserId, "watch_party_clear", {
         chatId: chatId.toString(),
         userId: socket.userId,
-      };
-      for (const sid of receiverSockets) {
-        io.to(sid).emit("watch_party_clear", payload);
-      }
+      });
     });
 
     socket.on(
       "watch_party_webrtc_signal",
       ({ chatId, otherUserId, type, payload: signalPayload }) => {
         if (!chatId || !otherUserId || !type) return;
-        const receiverSockets = userSocketMap.get(otherUserId.toString());
-        if (!receiverSockets) return;
-        for (const sid of receiverSockets) {
-          io.to(sid).emit("watch_party_webrtc_signal", {
-            chatId: chatId.toString(),
-            userId: socket.userId,
-            type,
-            payload: signalPayload,
-          });
-        }
+        emitToMappedUser(otherUserId, "watch_party_webrtc_signal", {
+          chatId: chatId.toString(),
+          userId: socket.userId,
+          type,
+          payload: signalPayload,
+        });
       },
     );
 
@@ -452,29 +335,18 @@ export const initSocket = (server) => {
       const raw = to != null ? String(to).trim() : "";
       const toId = raw || null;
       const payload = { endedBy: socket.userId, to: toId };
-      if (toId) {
-        const receiverSockets = userSocketMap.get(toId);
-        if (receiverSockets) {
-          for (const sid of receiverSockets) {
-            io.to(sid).emit("call-ended", payload);
-          }
-        }
-        io.to(toId).emit("call-ended", payload);
-      }
+      if (toId) emitToMappedUser(toId, "call-ended", payload);
       socket.emit("call-ended", payload);
-      io.emit("call-ended", payload);
     });
   });
 };
 
-// ================= HELPERS =================
 export const getReceiverSocketId = (userId) => {
   const sockets = userSocketMap.get(userId?.toString());
   if (!sockets) return [];
   return Array.from(sockets);
 };
 
-/** Emit to every socket for a user (handles multiple devices). */
 export const emitToUser = (userId, event, ...args) => {
   const ids = getReceiverSocketId(userId);
   for (const sid of ids) {
@@ -482,7 +354,6 @@ export const emitToUser = (userId, event, ...args) => {
   }
 };
 
-/** Live Socket.IO connections (all tabs / devices). For /metrics. */
 export const getConnectedSocketCount = () =>
   typeof io?.engine?.clientsCount === "number" ? io.engine.clientsCount : 0;
 

@@ -216,6 +216,7 @@ export const useAuthStore = create((set, get) => ({
     socket.on("connect", () => {
       const chatStore = useChatStore.getState();
       chatStore.subscribeToMessages();
+      chatStore.subscribeToChatEvents();
     });
 
     socket.on("connect_error", (err) => {

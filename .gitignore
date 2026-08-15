@@ -2,5 +2,7 @@ backend/.env
 backend/uploads/
 frontend/.env
 frontend/src/lib/.env
-*.dmg
+node_modules/
+frontend/dist/
+.DS_Store
 *.dmg

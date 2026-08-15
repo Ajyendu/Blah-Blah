@@ -4,16 +4,31 @@ import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 import { useNoteStore } from "./useNoteStore";
 import { useGameStore } from "./useGameStore";
-let listenersAttached = false;
+
 const INITIAL_MESSAGES_LIMIT = 30;
+
+function upsertMessage(list, msg) {
+  if (!msg) return list;
+  const id = msg._id != null ? String(msg._id) : "";
+  const clientId = msg.clientId != null ? String(msg.clientId) : "";
+  const idx = list.findIndex((m) => {
+    const mid = m._id != null ? String(m._id) : "";
+    const cid = m.clientId != null ? String(m.clientId) : "";
+    if (id && mid === id) return true;
+    if (clientId && (mid === clientId || cid === clientId)) return true;
+    return false;
+  });
+  if (idx === -1) return [...list, { ...msg, pending: false }];
+  const next = list.slice();
+  next[idx] = { ...next[idx], ...msg, pending: false };
+  return next;
+}
 
 export const useChatStore = create((set, get) => ({
   messages: [],
   /** conversationId -> cached messages for instant render on chat switch */
   messagesByChatId: {},
-  users: [],
   selectedUser: null,
-  isUsersLoading: false,
   isMessagesLoading: false,
   isMessagesLoadingMore: false,
   hasMoreOlderMessages: false,
@@ -24,7 +39,6 @@ export const useChatStore = create((set, get) => ({
   rejectedChatId: null,
   /** chatId -> number of unseen messages (for sidebar badge: count of chats with unseen) */
   unreadCountByChatId: {},
-  isScreenSharing: false,
   sendByCodeLoading: false,
   isChatsLoading: false,
   friendsChats: [],
@@ -178,18 +192,6 @@ export const useChatStore = create((set, get) => ({
       return { chats: [chat, ...state.chats] };
     });
   },
-  startScreenShare: () => {
-    set({ isScreenSharing: true });
-    const socket = useAuthStore.getState().socket;
-    socket.emit("start_screen_share");
-  },
-
-  stopScreenShare: () => {
-    set({ isScreenSharing: false });
-    const socket = useAuthStore.getState().socket;
-    socket.emit("stop_screen_share");
-  },
-
   setSelectedChat: (chat) => {
     // Whenever we move to a different chat (or away from chat), close panels tied to the previous chat
     const noteState = useNoteStore.getState();
@@ -221,18 +223,6 @@ export const useChatStore = create((set, get) => ({
         unreadCountByChatId: nextUnread,
       };
     });
-  },
-
-  getUsers: async () => {
-    set({ isUsersLoading: true });
-    try {
-      const res = await axiosInstance.get("/messages/users");
-      set({ users: res.data });
-    } catch (error) {
-      toast.error(error.response.data.message);
-    } finally {
-      set({ isUsersLoading: false });
-    }
   },
 
   deleteMessage: async (messageId, scope) => {
@@ -376,34 +366,79 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  sendMessage: async (messageData) => {
-    const { selectedUser } = get();
+  sendMessage: (messageData) => {
+    const { selectedUser, selectedChat } = get();
+    const authUser = useAuthStore.getState().authUser;
+    if (!selectedUser?._id || !selectedChat?._id || !authUser?._id) return;
 
-    try {
-      await axiosInstance.post(
-        `/messages/send/${selectedUser._id}`,
-        messageData,
-        {
-          maxContentLength: 50 * 1024 * 1024, // 50MB for base64 images
-          maxBodyLength: 50 * 1024 * 1024,
-          timeout: 60000,
+    const clientId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `tmp-${Date.now()}`;
+    const chatId = String(messageData.conversationId || selectedChat._id);
+    const optimistic = {
+      _id: clientId,
+      clientId,
+      chatId,
+      senderId: authUser._id,
+      receiverId: selectedUser._id,
+      text: messageData.text || "",
+      image: messageData.image || "",
+      fileName: messageData.fileName || "",
+      revealAt: messageData.revealAt || null,
+      revealed: !messageData.revealAt,
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+
+    set((state) => {
+      const nextMessages = [...state.messages, optimistic];
+      return {
+        messages: nextMessages,
+        messagesByChatId: {
+          ...state.messagesByChatId,
+          [chatId]: nextMessages,
         },
-      );
-      // Real-time update is via backend emitting new_message; only emit send_message for AI when no image
-      const socket = useAuthStore.getState().socket;
-      socket.emit("join_chat", { chatId: messageData.conversationId });
-      if (!messageData.image) {
-        socket.emit("send_message", {
-          chatId: messageData.conversationId,
-          message: messageData.text,
+        chats: (() => {
+          const current = state.chats.find((c) => String(c._id) === chatId);
+          if (!current) return state.chats;
+          const updated = {
+            ...current,
+            lastMessage: optimistic,
+            updatedAt: optimistic.createdAt,
+          };
+          return [updated, ...state.chats.filter((c) => String(c._id) !== chatId)];
+        })(),
+      };
+    });
+
+    axiosInstance
+      .post(`/messages/send/${selectedUser._id}`, { ...messageData, clientId }, {
+        maxContentLength: 50 * 1024 * 1024,
+        maxBodyLength: 50 * 1024 * 1024,
+        timeout: 60000,
+      })
+      .then((res) => {
+        const saved = res.data;
+        if (!saved) return;
+        saved.clientId = clientId;
+        set((state) => {
+          const nextMessages = upsertMessage(state.messages, saved);
+          return {
+            messages: nextMessages,
+            messagesByChatId: {
+              ...state.messagesByChatId,
+              [chatId]: upsertMessage(state.messagesByChatId[chatId] || nextMessages, saved),
+            },
+          };
         });
-      }
-      // So zero-message conversations appear in the panel after first send
-      get().getMyChats();
-    } catch (error) {
-      console.error("Send failed:", error);
-      toast.error(error.response?.data?.message || "Failed to send message");
-    }
+      })
+      .catch((error) => {
+        set((state) => ({
+          messages: state.messages.filter((m) => String(m._id) !== clientId),
+        }));
+        toast.error(error.response?.data?.message || "Failed to send message");
+      });
   },
 
   markMessageRevealed: (messageId) =>
@@ -489,17 +524,21 @@ export const useChatStore = create((set, get) => ({
             ];
           }
         }
+        const nextMessages = isForCurrentChat
+          ? upsertMessage(state.messages, msg)
+          : state.messages;
         return {
-          messages: isForCurrentChat
-            ? [...state.messages, msg]
-            : state.messages,
+          messages: nextMessages,
           unreadCountByChatId: nextUnread,
           chats: nextChats,
           messagesByChatId:
-            isForCurrentChat && msg.chatId
+            isForCurrentChat && chatId
               ? {
                   ...state.messagesByChatId,
-                  [String(msg.chatId)]: [...state.messages, msg],
+                  [chatId]: upsertMessage(
+                    state.messagesByChatId[chatId] || nextMessages,
+                    msg,
+                  ),
                 }
               : state.messagesByChatId,
         };
@@ -545,6 +584,9 @@ export const useChatStore = create((set, get) => ({
     if (!socket) return;
 
     socket.off("newChatMessage");
+    socket.off("chatRejected");
+    socket.off("chatUnaccepted");
+    socket.off("chatAccepted");
 
     socket.on("chatRejected", ({ conversationId }) => {
       const { selectedChat } = get();
@@ -584,12 +626,6 @@ export const useChatStore = create((set, get) => ({
     socket.on("chatAccepted", () => {
       get().getMyChats();
       get().getMyFriends();
-    });
-
-    socket.on("ai_private_reply", (data) => {
-      set((state) => ({
-        messages: [...state.messages, data],
-      }));
     });
 
     socket.on("newChatMessage", ({ chat, message }) => {
