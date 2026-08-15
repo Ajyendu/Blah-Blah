@@ -5,7 +5,6 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { flushSync } from "react-dom";
-import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import ThemeSync from "./components/ThemeSync";
 import CallListener from "./components/CallListener";
@@ -19,10 +18,21 @@ import { useGameStore } from "./store/useGameStore";
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const FriendsPage = lazy(() => import("./pages/FriendsPage"));
 
-function PageLoader() {
+function BrandLoader({ fullScreen = false }) {
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Loader className="size-10 animate-spin text-pink-500" />
+    <div
+      className={
+        fullScreen
+          ? "flex items-center justify-center h-screen"
+          : "flex items-center justify-center min-h-[60vh]"
+      }
+    >
+      <img
+        src="/logo.png"
+        alt="Blah Blah"
+        className="size-20 object-contain animate-spin"
+        style={{ animationDuration: "1.2s" }}
+      />
     </div>
   );
 }
@@ -128,11 +138,7 @@ const App = () => {
   }, []);
 
   if (isCheckingAuth) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader className="size-10 animate-spin" />
-      </div>
-    );
+    return <BrandLoader fullScreen />;
   }
 
   return (
@@ -217,7 +223,7 @@ const App = () => {
           path="/profile"
           element={
             authUser ? (
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<BrandLoader />}>
                 <ProfilePage />
               </Suspense>
             ) : (
@@ -229,7 +235,7 @@ const App = () => {
           path="/friends"
           element={
             authUser ? (
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<BrandLoader />}>
                 <FriendsPage
                   setCallType={setCallType}
                   setCalling={setCalling}
