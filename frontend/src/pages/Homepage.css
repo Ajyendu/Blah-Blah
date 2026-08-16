@@ -77,6 +77,11 @@
   padding-bottom: 40px; /* minimized now uses floating bubble, keep normal chat spacing */
 }
 
+.chat-main-wrap {
+  background: var(--chat-bg, #f4f4f5);
+  min-height: 0;
+}
+
 .chat-container-ref {
   transition: padding-bottom 0.35s ease;
 }

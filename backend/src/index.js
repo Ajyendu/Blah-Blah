@@ -7,6 +7,7 @@ import express from "express";
 import http from "http";
 import Message from "./models/message.model.js";
 import { connectDB } from "./lib/db.js";
+import { connectRedis, isRedisReady, getRedis } from "./lib/redis.js";
 import { initSocket, io, getConnectedSocketCount } from "./lib/socket.js";
 import {
   recordHttp,
@@ -63,7 +64,10 @@ app.use("/api/watch-party", watchPartyRoutes);
 
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
+  res.status(200).json({
+    status: "ok",
+    redis: isRedisReady() ? "up" : "off",
+  });
 });
 
 const metricsAllowed = () =>
@@ -88,6 +92,7 @@ app.get("/metrics", (req, res) => {
     },
     sockets: {
       connected: getConnectedSocketCount(),
+      redis: isRedisReady(),
     },
     pid: process.pid,
   });
@@ -96,13 +101,23 @@ app.get("/metrics", (req, res) => {
 /* ================= PROD ================= */
 
 /* ================= SOCKET ================= */
-initSocket(server); // ✅ ATTACH SOCKET.IO
-
 const TIMED_MESSAGE_INTERVAL_MS = 15_000;
 
 function startTimedMessageScheduler() {
   setInterval(async () => {
     try {
+      const redis = getRedis();
+      if (isRedisReady() && redis) {
+        const locked = await redis.set(
+          "lock:timed-messages",
+          "1",
+          "PX",
+          TIMED_MESSAGE_INTERVAL_MS - 500,
+          "NX",
+        );
+        if (!locked) return;
+      }
+
       const pending = await Message.find({
         revealed: false,
         revealAt: { $lte: new Date() },
@@ -143,10 +158,12 @@ async function start() {
     process.exit(1);
   }
 
+  await connectRedis();
+  await initSocket(server);
+
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Server listening on port ${PORT}`);
     startTimedMessageScheduler();
-    console.log("⏰ Timed message scheduler started");
   });
 }
 

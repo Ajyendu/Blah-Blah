@@ -6,7 +6,7 @@ import { useThemeStore } from "../store/useThemeStore";
 import { useIsMobile } from "../hooks/useMediaQuery";
 import "./Sidebar.css";
 
-const DARK_BG_VALUES = ["#0a0a0a", "#0f0f0f", "#000000"];
+const DARK_BG_VALUES = ["#0a0a0a", "#0f0f0f", "#000000", "#0d0d0d", "#111111"];
 
 const NAV_ITEMS = [
   { id: "all", label: "All chats", Icon: MessageCircle, badge: true },
@@ -25,8 +25,9 @@ const Sidebar = () => {
 
   const isDarkMode =
     theme &&
-    (DARK_BG_VALUES.includes(theme.chatBg) ||
-      DARK_BG_VALUES.includes(theme.pageBg));
+    (DARK_BG_VALUES.includes(theme.pageBg) ||
+      DARK_BG_VALUES.includes(theme.appBg) ||
+      DARK_BG_VALUES.includes(theme.darkBg));
 
   const activeNav =
     location.pathname === "/friends"

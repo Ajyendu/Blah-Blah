@@ -28,10 +28,15 @@ const ThemeSync = () => {
     root.style.setProperty("--bubble-other", theme.bubbleOther);
     root.style.setProperty("--text-primary", theme.textPrimary);
     root.style.setProperty("--text-secondary", theme.textSecondary);
-    root.style.setProperty("--chat-bg", theme.chatBg);
-    if (theme.chatBg === "#0f0f0f" || theme.chatBg === "#000000" || theme.chatBg === "#0a0a0a" || theme.pageBg === "#0f0f0f" || theme.pageBg === "#000000" || theme.pageBg === "#0a0a0a") {
-      root.style.setProperty("--chat-mood-bg", theme.chatBg);
-    }
+    const isDark =
+      theme.pageBg === "#0f0f0f" ||
+      theme.pageBg === "#000000" ||
+      theme.pageBg === "#0a0a0a" ||
+      theme.pageBg === "#0d0d0d" ||
+      theme.appBg === "#111111";
+    const chatAreaBg = isDark ? "#f4f4f5" : (theme.chatBg || "#f4f4f5");
+    root.style.setProperty("--chat-bg", chatAreaBg);
+    root.style.setProperty("--chat-mood-bg", chatAreaBg);
     root.style.setProperty("--panel-bg", theme.panelBg ?? "#ffffff");
     root.style.setProperty("--page-bg", theme.pageBg);
     root.style.setProperty("--input-bg", theme.inputBg ?? "#f8f9fb");
@@ -41,13 +46,6 @@ const ThemeSync = () => {
     root.style.setProperty("--chat-list-item-selected-bg", theme.chatListItemSelectedBg ?? "#fce7f3");
     root.style.setProperty("--chat-list-item-selected-border", theme.chatListItemSelectedBorder ?? "transparent");
     root.style.setProperty("--surface-border", theme.surfaceBorder ?? "#e2e8f0");
-    const isDark =
-      theme.chatBg === "#0f0f0f" ||
-      theme.chatBg === "#000000" ||
-      theme.chatBg === "#0a0a0a" ||
-      theme.pageBg === "#0f0f0f" ||
-      theme.pageBg === "#000000" ||
-      theme.pageBg === "#0a0a0a";
     root.style.setProperty(
       "--content-border",
       isDark ? "transparent" : (theme.contentBorder ?? "#000000"),

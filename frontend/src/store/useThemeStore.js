@@ -52,9 +52,10 @@ export const DEFAULT_THEME = {
 /** Dark mode preset: multiple shades of grey/black for depth and reduced eye strain */
 export const DARK_THEME = {
   ...DEFAULT_THEME,
-  /* Deepest background (page, chat area) */
+  /* Deepest background (page, shell) */
   pageBg: "#0a0a0a",
-  chatBg: "#0a0a0a",
+  /* Message thread stays light so bubbles stay readable */
+  chatBg: "#f4f4f5",
   /* Sidebar / outer shell */
   darkBg: "#0d0d0d",
   /* Main content card – slightly lifted */
@@ -94,12 +95,24 @@ const BACKUP_KEY = "blah-blah-theme-before-reset";
 let persistTimer = null;
 let lastPersistedThemeKey = "";
 
+const isDarkShell = (theme) =>
+  theme?.pageBg === "#0a0a0a" ||
+  theme?.pageBg === "#0f0f0f" ||
+  theme?.pageBg === "#000000" ||
+  theme?.pageBg === "#0d0d0d" ||
+  theme?.appBg === "#111111";
+
+const withLightChatBg = (theme) => {
+  const next = { ...DEFAULT_THEME, ...theme };
+  if (isDarkShell(next)) next.chatBg = "#f4f4f5";
+  return next;
+};
+
 const loadTheme = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_THEME, ...parsed };
+      return withLightChatBg(JSON.parse(raw));
     }
   } catch (_) {}
   return DEFAULT_THEME;
@@ -227,9 +240,7 @@ export const useThemeStore = create((set, get) => ({
 
   /** Hydrate theme from account data on login/checkAuth; bright mode by default */
   hydrateFromAccountTheme: (serverTheme) => {
-    const next = serverTheme
-      ? { ...DEFAULT_THEME, ...serverTheme }
-      : { ...DEFAULT_THEME };
+    const next = withLightChatBg(serverTheme || DEFAULT_THEME);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch (_) {}

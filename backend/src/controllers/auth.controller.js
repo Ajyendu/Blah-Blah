@@ -1,4 +1,5 @@
 import User from "../models/user.model.js";
+import { redisDel } from "../lib/redis.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
@@ -167,6 +168,8 @@ export const updateProfile = async (req, res) => {
       updates,
       { new: true },
     ).select("_id fullName email profilePic userCode theme");
+
+    await redisDel(`user:pub:${userId}`);
 
     return res.status(200).json(updatedUser);
   } catch (err) {

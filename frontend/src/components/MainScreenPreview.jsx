@@ -93,7 +93,7 @@ const MainScreenPreview = ({ theme, isMobile }) => {
     "--bubble-other": displayTheme.bubbleOther,
     "--text-primary": displayTheme.textPrimary,
     "--text-secondary": displayTheme.textSecondary,
-    "--chat-bg": displayTheme.chatBg,
+    "--chat-bg": displayIsDark ? "#f4f4f5" : displayTheme.chatBg,
     "--panel-bg": displayTheme.panelBg ?? "#ffffff",
     "--page-bg": displayTheme.pageBg,
   };

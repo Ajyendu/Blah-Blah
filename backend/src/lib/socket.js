@@ -1,35 +1,77 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import { createAdapter } from "@socket.io/redis-adapter";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import { corsOriginCallback } from "./corsConfig.js";
+import {
+  getRedis,
+  isRedisReady,
+  redisGetJson,
+  redisSetJson,
+} from "./redis.js";
 
 let io;
 
 /**
- * userId -> Set(socketId)
+ * userId -> Set(socketId) — local fallback when Redis is off
  */
 const userSocketMap = new Map();
+const ONLINE_KEY = "presence:online";
+const socketsKey = (userId) => `presence:sockets:${userId}`;
 
 let onlineBroadcastTimer = null;
+
+async function listOnlineUserIds() {
+  if (isRedisReady()) {
+    return getRedis().smembers(ONLINE_KEY);
+  }
+  return Array.from(userSocketMap.keys());
+}
 
 function broadcastOnlineUsers() {
   if (!io) return;
   clearTimeout(onlineBroadcastTimer);
-  onlineBroadcastTimer = setTimeout(() => {
-    io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
+  onlineBroadcastTimer = setTimeout(async () => {
+    try {
+      const ids = await listOnlineUserIds();
+      io.emit("getOnlineUsers", ids);
+    } catch (err) {
+      console.error("presence broadcast:", err.message);
+    }
   }, 250);
 }
 
-function emitToMappedUser(userId, event, payload) {
-  const sockets = userSocketMap.get(String(userId));
-  if (!sockets) return;
-  for (const sid of sockets) {
-    io.to(sid).emit(event, payload);
-  }
+async function addPresence(userId, socketId) {
+  const sockets = userSocketMap.get(userId) || new Set();
+  sockets.add(socketId);
+  userSocketMap.set(userId, sockets);
+  if (!isRedisReady()) return;
+  const redis = getRedis();
+  await redis.sadd(socketsKey(userId), socketId);
+  await redis.sadd(ONLINE_KEY, userId);
+  await redis.expire(socketsKey(userId), 60 * 60 * 24);
 }
 
-export const initSocket = (server) => {
+async function removePresence(userId, socketId) {
+  const set = userSocketMap.get(userId);
+  if (set) {
+    set.delete(socketId);
+    if (set.size === 0) userSocketMap.delete(userId);
+  }
+  if (!isRedisReady()) return;
+  const redis = getRedis();
+  await redis.srem(socketsKey(userId), socketId);
+  const remaining = await redis.scard(socketsKey(userId));
+  if (remaining === 0) await redis.srem(ONLINE_KEY, userId);
+}
+
+function emitToMappedUser(userId, event, payload) {
+  if (!io || userId == null) return;
+  io.to(String(userId)).emit(event, payload);
+}
+
+export const initSocket = async (server) => {
   io = new Server(server, {
     path: "/socket.io",
     maxHttpBufferSize: 5e6,
@@ -47,6 +89,13 @@ export const initSocket = (server) => {
     },
   });
 
+  const redis = getRedis();
+  if (redis) {
+    const sub = redis.duplicate();
+    io.adapter(createAdapter(redis, sub));
+    console.log("Socket.IO Redis adapter enabled");
+  }
+
   io.use(async (socket, next) => {
     try {
       const secret = process.env.JWT_SECRET;
@@ -60,9 +109,24 @@ export const initSocket = (server) => {
       }
 
       const decoded = jwt.verify(token, secret);
-      const user = await User.findById(decoded.userId)
-        .select("_id fullName profilePic")
-        .lean();
+      const cacheKey = `user:pub:${decoded.userId}`;
+      let user = await redisGetJson(cacheKey);
+      if (!user) {
+        user = await User.findById(decoded.userId)
+          .select("_id fullName profilePic")
+          .lean();
+        if (user) {
+          await redisSetJson(
+            cacheKey,
+            {
+              _id: user._id,
+              fullName: user.fullName,
+              profilePic: user.profilePic,
+            },
+            300,
+          );
+        }
+      }
 
       if (!user) {
         return next(new Error("Unauthorized"));
@@ -77,22 +141,13 @@ export const initSocket = (server) => {
     }
   });
 
-  io.on("connection", (socket) => {
-    const sockets = userSocketMap.get(socket.userId) || new Set();
-    sockets.add(socket.id);
-    userSocketMap.set(socket.userId, sockets);
-
+  io.on("connection", async (socket) => {
+    await addPresence(socket.userId, socket.id);
     socket.join(socket.userId);
     broadcastOnlineUsers();
 
-    socket.on("disconnect", () => {
-      const set = userSocketMap.get(socket.userId);
-      if (set) {
-        set.delete(socket.id);
-        if (set.size === 0) {
-          userSocketMap.delete(socket.userId);
-        }
-      }
+    socket.on("disconnect", async () => {
+      await removePresence(socket.userId, socket.id);
       broadcastOnlineUsers();
     });
 
@@ -348,10 +403,8 @@ export const getReceiverSocketId = (userId) => {
 };
 
 export const emitToUser = (userId, event, ...args) => {
-  const ids = getReceiverSocketId(userId);
-  for (const sid of ids) {
-    io.to(sid).emit(event, ...args);
-  }
+  if (!io || userId == null) return;
+  io.to(String(userId)).emit(event, ...args);
 };
 
 export const getConnectedSocketCount = () =>
