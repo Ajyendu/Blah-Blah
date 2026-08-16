@@ -1,16 +1,15 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import { cacheGet, cacheKey, cacheSet, TTL } from "../lib/cache.js";
 
 export const protectRoute = async (req, res, next) => {
   try {
     let token = null;
 
-    // 🔥 1. Prefer cookie
     if (req.cookies?.jwt) {
       token = req.cookies.jwt;
     }
 
-    // 🔥 2. Fallback to Authorization header
     if (!token && req.headers.authorization?.startsWith("Bearer ")) {
       token = req.headers.authorization.split(" ")[1];
     }
@@ -20,12 +19,20 @@ export const protectRoute = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
+    const key = cacheKey.user(userId);
 
-    const user = await User.findById(decoded.userId).select("-password");
+    let user = await cacheGet(key);
+    if (!user) {
+      user = await User.findById(userId)
+        .select("_id fullName email profilePic userCode theme")
+        .lean();
+      if (user) await cacheSet(key, user, TTL.user);
+    }
+
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
-    console.log("JWT_SECRET:", process.env.JWT_SECRET);
 
     req.user = user;
     next();

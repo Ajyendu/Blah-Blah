@@ -4,6 +4,13 @@ import Message from "../models/message.model.js";
 import RejectedRequest from "../models/rejectedRequest.model.js";
 import mongoose from "mongoose";
 import { decrypt } from "../lib/encryption.js";
+import {
+  TTL,
+  bustChat,
+  cacheGet,
+  cacheKey,
+  cacheSet,
+} from "../lib/cache.js";
 
 export const acceptChat = async (req, res) => {
   const userId = req.user._id;
@@ -27,6 +34,8 @@ export const acceptChat = async (req, res) => {
 
   conversation.acceptedBy = userId;
   await conversation.save();
+
+  await bustChat(conversationId, ...conversation.participants);
 
   // Notify creator so their chat list (and Friends panel) updates — both see each other
   emitToUser(conversation.createdBy.toString(), "chatAccepted", {
@@ -62,11 +71,9 @@ export const rejectChat = async (req, res) => {
     rejectedAt: new Date(),
   });
 
-  // 🧹 clean messages
   await Message.deleteMany({ chatId: conversationId });
-
-  // 🧹 delete conversation
   await Conversation.findByIdAndDelete(conversationId);
+  await bustChat(conversationId, ...conversation.participants);
 
   res.json({ success: true });
 };
@@ -113,6 +120,7 @@ export const removeFriend = async (req, res) => {
   // So createdBy = the one who was removed (they "sent" the new request in UI terms).
   if (otherUserId) conversation.createdBy = otherUserId;
   await conversation.save();
+  await bustChat(conversationId, ...conversation.participants);
 
   if (otherUserId) {
     emitToUser(otherUserId.toString(), "chatUnaccepted", { conversationId });
@@ -123,6 +131,10 @@ export const removeFriend = async (req, res) => {
 
 export const getMyChats = async (req, res) => {
   const userId = req.user._id;
+  const listKey = cacheKey.chats(userId);
+  const cached = await cacheGet(listKey);
+  if (cached) return res.json(cached);
+
   const userOid =
     userId instanceof mongoose.Types.ObjectId
       ? userId
@@ -137,6 +149,7 @@ export const getMyChats = async (req, res) => {
     .lean();
 
   if (!chats.length) {
+    await cacheSet(listKey, [], TTL.chats);
     return res.json([]);
   }
 
@@ -198,12 +211,16 @@ export const getMyChats = async (req, res) => {
     });
   }
 
+  await cacheSet(listKey, visibleChats, TTL.chats);
   res.json(visibleChats);
 };
 
 /** All accepted conversations (friends) — no message-count filter. Used for Friends panel only. */
 export const getMyFriends = async (req, res) => {
   const userId = req.user._id;
+  const friendsKey = cacheKey.friends(userId);
+  const cached = await cacheGet(friendsKey);
+  if (cached) return res.json(cached);
 
   const chats = await Conversation.find({
     participants: userId,
@@ -214,5 +231,6 @@ export const getMyFriends = async (req, res) => {
     .limit(200)
     .lean();
 
+  await cacheSet(friendsKey, chats, TTL.friends);
   res.json(chats);
 };

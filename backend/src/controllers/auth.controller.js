@@ -1,5 +1,5 @@
 import User from "../models/user.model.js";
-import { redisDel } from "../lib/redis.js";
+import { bustUser } from "../lib/cache.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
@@ -122,21 +122,13 @@ export const checkAuth = async (req, res) => {
     return res.status(401).json({ message: "Not authenticated" });
   }
 
-  const user = await User.findById(req.user._id).select(
-    "_id fullName email profilePic userCode theme",
-  );
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
-
   res.status(200).json({
-    _id: user._id,
-    fullName: user.fullName,
-    email: user.email,
-    profilePic: user.profilePic || "",
-    userCode: user.userCode,
-    theme: user.theme || null,
+    _id: req.user._id,
+    fullName: req.user.fullName,
+    email: req.user.email,
+    profilePic: req.user.profilePic || "",
+    userCode: req.user.userCode,
+    theme: req.user.theme || null,
   });
 };
 
@@ -169,7 +161,7 @@ export const updateProfile = async (req, res) => {
       { new: true },
     ).select("_id fullName email profilePic userCode theme");
 
-    await redisDel(`user:pub:${userId}`);
+    await bustUser(userId, updatedUser.userCode);
 
     return res.status(200).json(updatedUser);
   } catch (err) {
@@ -189,6 +181,7 @@ export const deleteAccount = async (req, res) => {
     }
 
     await User.findByIdAndDelete(userId);
+    await bustUser(userId, user.userCode);
     res.cookie("jwt", "", { maxAge: 0 });
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (err) {

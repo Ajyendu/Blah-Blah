@@ -1,8 +1,14 @@
 import ChatDrawing from "../models/chatDrawing.model.js";
 import Conversation from "../models/conversation.model.js";
+import { TTL, cacheGet, cacheKey, cacheSet } from "../lib/cache.js";
 
 async function ensureParticipant(userId, chatId) {
-  const conv = await Conversation.findById(chatId).select("participants").lean();
+  const key = cacheKey.conversation(chatId);
+  let conv = await cacheGet(key);
+  if (!conv) {
+    conv = await Conversation.findById(chatId).select("participants").lean();
+    if (conv) await cacheSet(key, conv, TTL.conversation);
+  }
   if (!conv) return false;
   const isParticipant = (conv.participants || []).some(
     (p) => p && p.toString() === userId.toString(),

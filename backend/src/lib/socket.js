@@ -10,6 +10,7 @@ import {
   redisGetJson,
   redisSetJson,
 } from "./redis.js";
+import { cacheKey, TTL } from "./cache.js";
 
 let io;
 
@@ -91,8 +92,9 @@ export const initSocket = async (server) => {
 
   const redis = getRedis();
   if (redis) {
+    const pub = redis.duplicate();
     const sub = redis.duplicate();
-    io.adapter(createAdapter(redis, sub));
+    io.adapter(createAdapter(pub, sub));
     console.log("Socket.IO Redis adapter enabled");
   }
 
@@ -109,21 +111,21 @@ export const initSocket = async (server) => {
       }
 
       const decoded = jwt.verify(token, secret);
-      const cacheKey = `user:pub:${decoded.userId}`;
-      let user = await redisGetJson(cacheKey);
+      const cacheKeyUser = cacheKey.userPub(decoded.userId);
+      let user = await redisGetJson(cacheKeyUser);
       if (!user) {
         user = await User.findById(decoded.userId)
           .select("_id fullName profilePic")
           .lean();
         if (user) {
           await redisSetJson(
-            cacheKey,
+            cacheKeyUser,
             {
               _id: user._id,
               fullName: user.fullName,
               profilePic: user.profilePic,
             },
-            300,
+            TTL.user,
           );
         }
       }

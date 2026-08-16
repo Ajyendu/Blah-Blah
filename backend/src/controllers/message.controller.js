@@ -6,6 +6,14 @@ import { emitToUser } from "../lib/socket.js";
 import Conversation from "../models/conversation.model.js";
 import RejectedRequest from "../models/rejectedRequest.model.js";
 import { encrypt, decrypt } from "../lib/encryption.js";
+import {
+  TTL,
+  bustChat,
+  bustMessages,
+  cacheGet,
+  cacheKey,
+  cacheSet,
+} from "../lib/cache.js";
 
 export const deleteMessage = async (req, res) => {
   try {
@@ -33,6 +41,7 @@ export const deleteMessage = async (req, res) => {
       }
       await message.save();
       await ChatNote.deleteMany({ messageId: message._id, userId });
+      await bustMessages(message.chatId, message.senderId, message.receiverId);
       return res.json({ success: true });
     }
 
@@ -68,6 +77,7 @@ export const deleteMessage = async (req, res) => {
         payload,
       );
 
+      await bustChat(message.chatId, message.senderId, message.receiverId);
       return res.json({ success: true });
     }
 
@@ -87,12 +97,20 @@ export const sendMessageByCode = async (req, res) => {
       return res.status(400).json({ message: "User code is required" });
     }
 
-    const receiver = await User.findOne({ userCode: userCode.trim() });
+    const code = userCode.trim();
+    const codeKey = cacheKey.userCode(code);
+    let receiver = await cacheGet(codeKey);
+    if (!receiver) {
+      receiver = await User.findOne({ userCode: code })
+        .select("_id fullName profilePic userCode")
+        .lean();
+      if (receiver) await cacheSet(codeKey, receiver, TTL.userCode);
+    }
     if (!receiver) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (receiver._id.equals(senderId)) {
+    if (String(receiver._id) === String(senderId)) {
       return res.status(400).json({ message: "Cannot message yourself" });
     }
 
@@ -155,6 +173,8 @@ export const sendMessageByCode = async (req, res) => {
     emitToUser(receiver._id.toString(), "newChatMessage", payload);
     emitToUser(senderId.toString(), "newChatMessage", payload);
 
+    await bustChat(chat._id, senderId, receiver._id);
+
     return res.status(200).json({ chat: populatedChat });
   } catch (err) {
     console.error("sendMessageByCode error:", err);
@@ -168,6 +188,12 @@ export const getMessagesByConversation = async (req, res) => {
     const userId = req.user._id;
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 50);
     const beforeId = req.query.before || null;
+    const pageKey = cacheKey.messages(conversationId, userId);
+
+    if (!beforeId) {
+      const cached = await cacheGet(pageKey);
+      if (cached) return res.status(200).json(cached);
+    }
 
     if (!beforeId) {
       const seenAt = new Date();
@@ -224,8 +250,9 @@ export const getMessagesByConversation = async (req, res) => {
       .reverse();
 
     const hasMore = messages.length === limit;
-
-    res.status(200).json({ messages: normalized, hasMore });
+    const body = { messages: normalized, hasMore };
+    if (!beforeId) await cacheSet(pageKey, body, TTL.messages);
+    res.status(200).json(body);
   } catch (err) {
     console.error("getMessagesByConversation error:", err);
     res.status(500).json({ message: "Internal server error" });
@@ -291,6 +318,8 @@ export const sendMessage = async (req, res) => {
 
     emitToUser(senderId.toString(), "new_message", payload);
     emitToUser(String(receiverId), "new_message", payload);
+
+    await bustChat(conversation._id, senderId, receiverId);
 
     res.status(201).json(payload);
   } catch (error) {

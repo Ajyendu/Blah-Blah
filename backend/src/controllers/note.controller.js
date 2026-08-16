@@ -1,6 +1,8 @@
 import ChatNote from "../models/chatNote.model.js";
 import Message from "../models/message.model.js";
 import { encrypt, decrypt } from "../lib/encryption.js";
+import { TTL, cacheGet, cacheKey, cacheSet } from "../lib/cache.js";
+import { redisDel } from "../lib/redis.js";
 
 /* ⭐ TOGGLE IMPORTANT */
 // export const searchNote = async (req, res) => {
@@ -47,6 +49,7 @@ export const toggleNote = async (req, res) => {
 
     if (existing) {
       await existing.deleteOne();
+      await redisDel(cacheKey.notes(chatId, userId));
       return res.json({ saved: false });
     }
 
@@ -82,6 +85,7 @@ export const toggleNote = async (req, res) => {
     const noteObj = note.toObject();
     if (noteObj.messageSenderId)
       noteObj.messageSenderId = noteObj.messageSenderId.toString();
+    await redisDel(cacheKey.notes(chatId, userId));
     res.json({ saved: true, note: noteObj });
   } catch (err) {
     console.error("toggleNote error:", err);
@@ -94,6 +98,9 @@ export const getChatNotes = async (req, res) => {
   try {
     const userId = req.user._id;
     const { chatId } = req.params;
+    const notesKey = cacheKey.notes(chatId, userId);
+    const cached = await cacheGet(notesKey);
+    if (cached) return res.json(cached);
 
     let notes = await ChatNote.find({ userId, chatId }).sort({
       createdAt: 1,
@@ -111,6 +118,7 @@ export const getChatNotes = async (req, res) => {
       }
     }
 
+    await cacheSet(notesKey, notes, TTL.notes);
     res.json(notes);
   } catch (err) {
     console.error("getChatNotes error:", err);
@@ -133,6 +141,7 @@ export const deleteNote = async (req, res) => {
     }
 
     await note.deleteOne();
+    await redisDel(cacheKey.notes(note.chatId, note.userId));
 
     res.json({ success: true });
   } catch (err) {
