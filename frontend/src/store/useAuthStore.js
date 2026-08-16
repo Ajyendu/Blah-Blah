@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { axiosInstance } from "../lib/axios.js";
+import { axiosInstance, wakeBackend } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useChatStore } from "./useChatStore.js";
@@ -56,27 +56,48 @@ export const useAuthStore = create((set, get) => ({
   // ================= CHECK AUTH =================
   checkAuth: async () => {
     stripTokenFromUrl();
-    try {
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-      if (token) {
-        axiosInstance.defaults.headers.common["Authorization"] =
-          `Bearer ${token}`;
-      }
+    if (!token) {
+      set({ authUser: null, isCheckingAuth: false });
+      return;
+    }
 
-      const res = await axiosInstance.get("/auth/check", {
+    axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+    const requestAuth = () =>
+      axiosInstance.get("/auth/check", {
         withCredentials: true,
+        timeout: 25000,
       });
 
-      set({ authUser: res.data });
-      // Hydrate per-account theme (bright by default) from server
+    try {
+      await wakeBackend();
+      let res;
+      try {
+        res = await requestAuth();
+      } catch (first) {
+        const retryable =
+          first.code === "ECONNABORTED" ||
+          first.code === "ERR_NETWORK" ||
+          !first.response;
+        if (!retryable) throw first;
+        await wakeBackend(30000);
+        res = await requestAuth();
+      }
+
+      set({ authUser: res.data, isCheckingAuth: false });
       useThemeStore.getState().hydrateFromAccountTheme(res.data.theme);
       closeAllPanels();
       get().connectSocket();
     } catch (error) {
-      console.log("Error in checkAuth:", error);
-      set({ authUser: null });
-    } finally {
+      const status = error.response?.status;
+      if (status === 401 || status === 403) {
+        localStorage.removeItem("token");
+        delete axiosInstance.defaults.headers.common["Authorization"];
+        set({ authUser: null, token: null, isCheckingAuth: false });
+        return;
+      }
       set({ isCheckingAuth: false });
     }
   },
